@@ -37,7 +37,9 @@ export function structuredExtraction(e: LdEvent, artistName: string, now = new D
   if (eb.length) {
     const st = eb.map((o) => offerStatus(o, now));
     ebStatus = st.includes("open") ? "open" : st.includes("upcoming") ? "opening" : st.every((s) => s === "sold_out") ? "sold_out" : "unknown";
-  } else if (offers.length) {
+  } else if (offers.length > 1) {
+    // Only a full tier list (event detail page) can say there is no early-bird. Listing pages carry
+    // one summary offer, which says nothing either way.
     ebStatus = "none";
   }
   const ebOffer = eb[0];
