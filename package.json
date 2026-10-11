@@ -20,7 +20,9 @@
     "spotify:auth": "tsx scripts/spotify-auth.ts",
     "telegram:webhook": "tsx scripts/set-webhook.ts",
     "dev": "pnpm --filter @radar/web dev",
-    "screenshots": "tsx scripts/screenshot.ts"
+    "screenshots": "tsx scripts/screenshot.ts",
+    "secrets": "tsx scripts/secrets.ts",
+    "check": "tsx scripts/check-accounts.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

@@ -1,0 +1,127 @@
+/**
+ * Manage local secrets without pasting them anywhere else.
+ *   pnpm secrets set GEMINI_API_KEY GROQ_API_KEY   prompt (hidden) and save to .env
+ *   pnpm secrets generate                          fill the random secrets that are still empty
+ *   pnpm secrets push                              copy the GitHub-side values from .env to GitHub secrets (gh CLI)
+ *   pnpm secrets status                            which variables are set (names only)
+ * Values are never printed.
+ */
+import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const ENV = join(import.meta.dirname, "../.env");
+
+/** Secrets the GitHub Actions jobs need (README → "Where every secret goes"). */
+const GITHUB_SECRETS = [
+  "DATABASE_URL",
+  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
+  "TELEGRAM_BOT_TOKEN",
+  "TELEGRAM_ALERT_CHAT_ID",
+  "TELEGRAM_TEST_CHAT_ID",
+  "SPOTIFY_CLIENT_ID",
+  "SPOTIFY_CLIENT_SECRET",
+  "SPOTIFY_REFRESH_TOKEN",
+  "FACEBOOK_APP_ID",
+  "FACEBOOK_APP_SECRET",
+  "INSTAGRAM_USER_ID",
+  "INSTAGRAM_ACCESS_TOKEN",
+  "SETLISTFM_API_KEY",
+  "MUSICBRAINZ_CONTACT",
+];
+const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32 } as const;
+
+function readEnv(): Map<string, string> {
+  const m = new Map<string, string>();
+  if (!existsSync(ENV)) return m;
+  for (const line of readFileSync(ENV, "utf8").split(/\r?\n/)) {
+    const x = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
+    if (x) m.set(x[1]!, x[2]!.replace(/^(['"])(.*)\1$/, "$2"));
+  }
+  return m;
+}
+
+function writeEnv(updates: Record<string, string>): void {
+  const lines = existsSync(ENV) ? readFileSync(ENV, "utf8").split(/\r?\n/) : [];
+  const done = new Set<string>();
+  const out = lines.map((line) => {
+    const k = /^\s*([A-Z0-9_]+)\s*=/.exec(line)?.[1];
+    if (k && k in updates) {
+      done.add(k);
+      return `${k}=${updates[k]}`;
+    }
+    return line;
+  });
+  for (const [k, v] of Object.entries(updates)) if (!done.has(k)) out.push(`${k}=${v}`);
+  writeFileSync(ENV, out.join("\n").replace(/\n+$/, "") + "\n");
+}
+
+/** Reads a line without echoing it. */
+function askHidden(prompt: string): Promise<string> {
+  return new Promise((resolve) => {
+    process.stdout.write(prompt);
+    const stdin = process.stdin;
+    let value = "";
+    const raw = stdin.isTTY;
+    if (raw) stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+    const onData = (chunk: string) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") {
+          stdin.off("data", onData);
+          if (raw) stdin.setRawMode(false);
+          stdin.pause();
+          process.stdout.write("\n");
+          return resolve(value.trim());
+        }
+        if (ch === "\u0003") process.exit(130); // Ctrl-C
+        if (ch === "\u007f" || ch === "\b") {
+          if (value.length) {
+            value = value.slice(0, -1);
+            process.stdout.write("\b \b");
+          }
+        } else {
+          value += ch;
+          process.stdout.write("•");
+        }
+      }
+    };
+    stdin.on("data", onData);
+  });
+}
+
+const [cmd = "status", ...names] = process.argv.slice(2);
+const env = readEnv();
+
+if (cmd === "set") {
+  if (!names.length) {
+    console.log("Usage: pnpm secrets set NAME [NAME...]");
+    process.exit(1);
+  }
+  const updates: Record<string, string> = {};
+  for (const n of names) {
+    const v = await askHidden(`${n}${env.get(n) ? " (already set; Enter to keep)" : ""}: `);
+    if (v) updates[n] = v;
+  }
+  if (Object.keys(updates).length) writeEnv(updates);
+  console.log(`Saved ${Object.keys(updates).length} value(s) to .env.`);
+} else if (cmd === "generate") {
+  const updates: Record<string, string> = {};
+  for (const [k, bytes] of Object.entries(RANDOM)) if (!env.get(k)) updates[k] = randomBytes(bytes).toString("base64url");
+  writeEnv(updates);
+  console.log(Object.keys(updates).length ? `Generated: ${Object.keys(updates).join(", ")}` : "All random secrets already exist.");
+} else if (cmd === "push") {
+  const present = GITHUB_SECRETS.filter((k) => env.get(k));
+  const missing = GITHUB_SECRETS.filter((k) => !env.get(k));
+  for (const k of present) {
+    const r = spawnSync("gh", ["secret", "set", k], { input: env.get(k), stdio: ["pipe", "ignore", "pipe"], encoding: "utf8", shell: process.platform === "win32" });
+    console.log(r.status === 0 ? `✓ ${k}` : `✗ ${k}: ${r.stderr.trim().split("\n")[0]}`);
+  }
+  if (missing.length) console.log(`\nNot set in .env yet (skipped): ${missing.join(", ")}`);
+} else {
+  const all = [...new Set([...GITHUB_SECRETS, ...Object.keys(RANDOM), "TELEGRAM_ALLOWED_CHAT_IDS", "ALLOWED_EMAIL", "AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET", "GOOGLE_CALENDAR_ICS_URL", "PUBLIC_BASE_URL"])];
+  for (const k of all) console.log(`${env.get(k) ? "✓" : "·"} ${k}`);
+}
