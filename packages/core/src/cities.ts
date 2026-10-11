@@ -28,6 +28,30 @@ export function normalizeCity(raw: string | null | undefined, cities: CityConfig
   return raw.trim().replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
+/** A configured city named as a whole word in free text ("… Live in Bangalore | 12 Dec"). */
+export function cityInText(text: string, cities: CityConfig[] = radarConfig.cities): string | null {
+  const t = ` ${norm(text)} `;
+  for (const c of cities) {
+    if ([c.name, ...c.aliases].some((a) => { const an = norm(a); return an.length >= 3 && t.includes(` ${an} `); })) return c.name;
+  }
+  return null;
+}
+
+/**
+ * City from an Indian postal address: the part before "State 560038". "…, Visakhapatnam,
+ * Andhra Pradesh 530001, India" → "Visakhapatnam". Falls back to configured-city detection.
+ */
+export function cityFromAddress(address: string): string | null {
+  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+  const pinIdx = parts.findIndex((p) => /^[A-Za-z .&]+\s+\d{6}$/.test(p));
+  if (pinIdx > 0) {
+    const known = cityInText(parts.slice(Math.max(0, pinIdx - 2), pinIdx + 1).join(", "));
+    return known ?? normalizeCity(parts[pinIdx - 1]!);
+  }
+  if (parts.length === 1) return normalizeCity(parts[0]!);
+  return cityInText(address);
+}
+
 export function isHomeCity(city: string | null | undefined): boolean {
   return normalizeCity(city) === radarConfig.homeCity;
 }

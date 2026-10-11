@@ -85,9 +85,9 @@ const raw: RadarConfig = {
   homeCity: "Bengaluru",
   timezone: "Asia/Kolkata",
   cities: [
-    { name: "Bengaluru", aliases: ["bengaluru", "bangalore", "blr", "b'lore", "bengaluru urban"], slugs: { district: "bengaluru", bookmyshow: "bengaluru", skillbox: "bengaluru" }, airport: "BLR" },
+    { name: "Bengaluru", aliases: ["bengaluru", "bangalore", "blr", "b'lore", "bengaluru urban"], slugs: { district: "bengaluru", bookmyshow: "bengaluru", skillbox: "bangalore" }, airport: "BLR" },
     { name: "Mumbai", aliases: ["mumbai", "bombay"], slugs: { district: "mumbai", bookmyshow: "mumbai", skillbox: "mumbai" }, airport: "BOM" },
-    { name: "Delhi NCR", aliases: ["delhi", "new delhi", "delhi ncr", "ncr", "gurgaon", "gurugram", "noida"], slugs: { district: "delhi-ncr", bookmyshow: "national-capital-region-ncr", skillbox: "delhi" }, airport: "DEL" },
+    { name: "Delhi NCR", aliases: ["delhi", "new delhi", "delhi ncr", "ncr", "gurgaon", "gurugram", "noida"], slugs: { district: "new-delhi", bookmyshow: "national-capital-region-ncr", skillbox: "new-delhi" }, airport: "DEL" },
     { name: "Pune", aliases: ["pune", "poona"], slugs: { district: "pune", bookmyshow: "pune", skillbox: "pune" }, airport: "PNQ" },
     { name: "Chennai", aliases: ["chennai", "madras"], slugs: { district: "chennai", bookmyshow: "chennai", skillbox: "chennai" }, airport: "MAA" },
     { name: "Hyderabad", aliases: ["hyderabad", "secunderabad"], slugs: { district: "hyderabad", bookmyshow: "hyderabad", skillbox: "hyderabad" }, airport: "HYD" },
