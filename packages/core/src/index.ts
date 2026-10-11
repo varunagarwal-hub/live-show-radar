@@ -17,3 +17,4 @@ export * from "./hash";
 export * from "./tiers";
 export * from "./ask";
 export * from "./bot";
+export * from "./reminders";
