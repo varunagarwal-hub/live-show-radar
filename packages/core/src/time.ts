@@ -27,7 +27,8 @@ export function formatDayMon(isoDate: string): string {
 
 /** "Sat, 13 Dec 2026" for an ISO date (YYYY-MM-DD). */
 export function formatDateIST(isoDate: string): string {
-  return fullFmt.format(dateOnlyToUtcNoonIST(isoDate));
+  const p = Object.fromEntries(fullFmt.formatToParts(dateOnlyToUtcNoonIST(isoDate)).map((x) => [x.type, x.value]));
+  return `${p.weekday}, ${p.day} ${p.month} ${p.year}`;
 }
 
 /** Midday IST on a calendar date, as a Date: safe for weekday/day maths with no edge drift. */

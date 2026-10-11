@@ -22,6 +22,7 @@
     "dev": "pnpm --filter @radar/web dev"
   },
   "dependencies": {
+    "@neondatabase/serverless": "1.2.0",
     "@radar/config": "workspace:*",
     "@radar/core": "workspace:*",
     "@radar/sources": "workspace:*",
