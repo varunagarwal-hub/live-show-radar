@@ -153,7 +153,7 @@ export function groqProvider(apiKey: string, textModel: string, visionModel?: st
 export function llmFromEnv(env: NodeJS.ProcessEnv = process.env, log?: (m: string) => void): Llm {
   const providers: LlmProvider[] = [];
   if (env.GEMINI_API_KEY) providers.push(geminiProvider(env.GEMINI_API_KEY, env.GEMINI_MODEL || "gemini-3.8-flash"));
-  if (env.GROQ_API_KEY) providers.push(groqProvider(env.GROQ_API_KEY, env.GROQ_MODEL || "llama-3.3-70b-versatile", env.GROQ_VISION_MODEL || undefined));
+  if (env.GROQ_API_KEY) providers.push(groqProvider(env.GROQ_API_KEY, env.GROQ_MODEL || "openai/gpt-oss-120b", env.GROQ_VISION_MODEL || undefined));
   if (!providers.length) throw new Error("No LLM configured: set GEMINI_API_KEY and/or GROQ_API_KEY");
   return createLlm(providers, log);
 }

@@ -70,7 +70,7 @@ await check("Gemini", ["GEMINI_API_KEY"], async () => {
 });
 
 await check("Groq", ["GROQ_API_KEY"], async () => {
-  const model = env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const model = env.GROQ_MODEL || "openai/gpt-oss-120b";
   await fetchJson("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.GROQ_API_KEY}` },

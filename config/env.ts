@@ -9,7 +9,7 @@ export const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().min(10),
   GEMINI_MODEL: z.string().default("gemini-3.8-flash"),
   GROQ_API_KEY: z.string().min(10),
-  GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
+  GROQ_MODEL: z.string().default("openai/gpt-oss-120b"),
   GROQ_VISION_MODEL: z.string().default("qwen/qwen3.8-27b"),
   TELEGRAM_BOT_TOKEN: z.string().min(20),
   TELEGRAM_ALLOWED_CHAT_IDS: z.string().min(1),
