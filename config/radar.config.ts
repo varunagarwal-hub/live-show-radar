@@ -110,7 +110,8 @@ const raw: RadarConfig = {
   dryRun: process.env.RADAR_DRY_RUN === "1" || process.env.RADAR_DRY_RUN === "true",
   features: {
     instagram: true,
-    ticketing: { district: true, bookmyshow: true, skillbox: true },
+    // BookMyShow is off: it answers automated requests with a Cloudflare challenge (README → Known limitations).
+    ticketing: { district: true, bookmyshow: false, skillbox: true },
     news: true,
     fanEmails: true,
     tierWatcher: true,
