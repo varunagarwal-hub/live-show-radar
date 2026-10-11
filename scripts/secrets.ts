@@ -58,17 +58,23 @@ function writeEnv(updates: Record<string, string>): void {
   writeFileSync(ENV, out.join("\n").replace(/\n+$/, "") + "\n");
 }
 
-/** Reads a line without echoing it. */
-function askHidden(prompt: string): Promise<string> {
+/**
+ * Reads a line without echoing it. In raw mode Ctrl+V arrives as a control character instead of
+ * pasting, so control characters are ignored (with a hint) and terminal escape sequences, such as
+ * bracketed-paste markers, are stripped.
+ */
+function askHiddenOnce(prompt: string): Promise<string> {
   return new Promise((resolve) => {
     process.stdout.write(prompt);
     const stdin = process.stdin;
     let value = "";
+    let hinted = false;
     const raw = stdin.isTTY;
     if (raw) stdin.setRawMode(true);
     stdin.resume();
     stdin.setEncoding("utf8");
-    const onData = (chunk: string) => {
+    const onData = (input: string) => {
+      const chunk = input.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "");
       for (const ch of chunk) {
         if (ch === "\r" || ch === "\n") {
           stdin.off("data", onData);
@@ -83,6 +89,11 @@ function askHidden(prompt: string): Promise<string> {
             value = value.slice(0, -1);
             process.stdout.write("\b \b");
           }
+        } else if (ch.charCodeAt(0) < 32) {
+          if (!hinted) {
+            process.stdout.write("\n  (Ctrl+V doesn't paste here: right-click to paste instead)\n" + prompt + "•".repeat(value.length));
+            hinted = true;
+          }
         } else {
           value += ch;
           process.stdout.write("•");
@@ -91,6 +102,15 @@ function askHidden(prompt: string): Promise<string> {
     };
     stdin.on("data", onData);
   });
+}
+
+/** Asks until the value looks like a real key (or is empty, meaning keep/skip). */
+async function askHidden(prompt: string): Promise<string> {
+  for (;;) {
+    const v = await askHiddenOnce(prompt);
+    if (!v || v.length >= 8) return v;
+    console.log(`  That's only ${v.length} character(s), which doesn't look like a key. Try again (right-click to paste).`);
+  }
 }
 
 const [cmd = "status", ...names] = process.argv.slice(2);
