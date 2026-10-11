@@ -1,0 +1,24 @@
+{
+  "name": "@radar/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db/index.ts",
+    "./db/schema": "./src/db/schema.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0",
+    "@radar/config": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "node-ical": "0.27.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.11"
+  }
+}

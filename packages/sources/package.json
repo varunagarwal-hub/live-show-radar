@@ -1,0 +1,16 @@
+{
+  "name": "@radar/sources",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@radar/config": "workspace:*",
+    "@radar/core": "workspace:*",
+    "cheerio": "1.2.0",
+    "fast-xml-parser": "5.11.2",
+    "zod": "4.6.5"
+  }
+}

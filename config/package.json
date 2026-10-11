@@ -1,0 +1,12 @@
+{
+  "name": "@radar/config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./env": "./env.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

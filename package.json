@@ -1,0 +1,34 @@
+{
+  "name": "live-show-radar",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @radar/web typecheck",
+    "test": "vitest run --project unit",
+    "test:e2e-dry": "vitest run --project e2e",
+    "db:generate": "pnpm --filter @radar/core db:generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "seed": "tsx scripts/seed.ts",
+    "job:poll": "tsx jobs/poll.ts",
+    "job:tiers": "tsx jobs/tiers.ts",
+    "job:watchlist": "tsx jobs/watchlist.ts",
+    "job:sunday": "tsx jobs/sunday.ts",
+    "spotify:auth": "tsx scripts/spotify-auth.ts",
+    "telegram:webhook": "tsx scripts/set-webhook.ts",
+    "dev": "pnpm --filter @radar/web dev"
+  },
+  "dependencies": {
+    "@radar/config": "workspace:*",
+    "@radar/core": "workspace:*",
+    "@radar/sources": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
+  }
+}
