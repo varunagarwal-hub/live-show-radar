@@ -18,3 +18,7 @@ export * from "./tiers";
 export * from "./ask";
 export * from "./bot";
 export * from "./reminders";
+export * from "./clash";
+export * from "./spotify";
+export * from "./setlists";
+export * from "./playlist";

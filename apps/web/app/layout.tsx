@@ -1,0 +1,75 @@
+import type { Metadata, Viewport } from "next";
+import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
+import Link from "next/link";
+import { BottomNav, DesktopNav, ThemeToggle } from "@/components/Chrome";
+import { mastheadDate } from "@/lib/format";
+import "./globals.css";
+
+// Big Shoulders (formerly "Big Shoulders Display"; Google merged the families behind an optical-size axis).
+const display = Big_Shoulders({ subsets: ["latin"], weight: "variable", axes: ["opsz"], variable: "--font-display", display: "swap" });
+const body = Schibsted_Grotesk({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-body", display: "swap" });
+
+export const metadata: Metadata = {
+  title: "Live Show Radar",
+  description: "Every show your artists announce in India, before the early-birds are gone.",
+  robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#E4E6E1" },
+    { media: "(prefers-color-scheme: dark)", color: "#141B30" },
+  ],
+};
+
+// Applies the saved theme before first paint so there's no flash.
+const themeInit = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en-IN" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
+      <body>
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false">
+          {/* Two-colour riso duotones for artist photos: navy shadows → city ink → paper highlights. */}
+          <filter id="duo-home" colorInterpolationFilters="sRGB">
+            <feColorMatrix type="saturate" values="0" />
+            <feComponentTransfer>
+              <feFuncR type="table" tableValues="0.106 0 0.894" />
+              <feFuncG type="table" tableValues="0.153 0.471 0.902" />
+              <feFuncB type="table" tableValues="0.271 0.749 0.882" />
+            </feComponentTransfer>
+          </filter>
+          <filter id="duo-away" colorInterpolationFilters="sRGB">
+            <feColorMatrix type="saturate" values="0" />
+            <feComponentTransfer>
+              <feFuncR type="table" tableValues="0.106 0.894" />
+              <feFuncG type="table" tableValues="0.153 0.902" />
+              <feFuncB type="table" tableValues="0.271 0.882" />
+            </feComponentTransfer>
+          </filter>
+        </svg>
+        <div className="frame">
+          <header className="masthead">
+            <Link href="/" className="wordmark">
+              Live Show Radar
+              <small suppressHydrationWarning>Bengaluru &amp; beyond · {mastheadDate()}</small>
+            </Link>
+            <DesktopNav />
+            <ThemeToggle />
+          </header>
+          <main id="main">{children}</main>
+        </div>
+        <BottomNav />
+      </body>
+    </html>
+  );
+}

@@ -19,7 +19,8 @@
     "job:sunday": "tsx jobs/sunday.ts",
     "spotify:auth": "tsx scripts/spotify-auth.ts",
     "telegram:webhook": "tsx scripts/set-webhook.ts",
-    "dev": "pnpm --filter @radar/web dev"
+    "dev": "pnpm --filter @radar/web dev",
+    "screenshots": "tsx scripts/screenshot.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
