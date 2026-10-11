@@ -46,6 +46,8 @@ export const artists = pgTable(
     handleStatus: handleStatus().notNull().default("none"),
     musicbrainzId: text(),
     priorityTier: priorityTier().notNull().default("C"),
+    /** Set from the Artists page; the daily sync keeps it instead of the listening-based tier. */
+    tierOverride: priorityTier("tier_override"),
     listenedNotFollowed: boolean().notNull().default(false),
     followed: boolean().notNull().default(false),
     muted: boolean().notNull().default(false),

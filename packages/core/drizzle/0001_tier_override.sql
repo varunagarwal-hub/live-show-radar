@@ -1,0 +1,1 @@
+ALTER TABLE "artists" ADD COLUMN "tier_override" "priority_tier";

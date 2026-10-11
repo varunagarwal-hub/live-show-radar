@@ -22,3 +22,6 @@ export * from "./clash";
 export * from "./spotify";
 export * from "./setlists";
 export * from "./playlist";
+export * from "./watchlist";
+export * from "./selfcheck";
+export * from "./digest";

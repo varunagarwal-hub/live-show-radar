@@ -45,7 +45,15 @@ export async function saveArtistAction(form: FormData): Promise<void> {
   const handle = input.instagramHandle || null;
   await db
     .update(artists)
-    .set({ instagramHandle: handle, handleStatus: handle ? "confirmed" : "none", aliases: input.aliases, priorityTier: input.priorityTier, updatedAt: new Date() })
+    .set({
+      instagramHandle: handle,
+      handleStatus: handle ? "confirmed" : "none",
+      aliases: input.aliases,
+      priorityTier: input.priorityTier,
+      // Only a changed tier counts as an override; saving a handle shouldn't freeze the tier.
+      tierOverride: input.priorityTier !== current.priorityTier ? input.priorityTier : current.tierOverride,
+      updatedAt: new Date(),
+    })
     .where(eq(artists.id, input.id));
   revalidatePath("/artists");
 }
