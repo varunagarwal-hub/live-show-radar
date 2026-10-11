@@ -1,0 +1,28 @@
+name: Set up Live Show Radar
+description: pnpm + Node with dependency cache, and the job's state files from the Actions cache.
+inputs:
+  job:
+    description: Job name (poll, tiers, watchlist, sunday)
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+    # Job state and the shared watchlist snapshot let quiet runs skip the database entirely.
+    # Each save uses a new key (caches are immutable); restore picks the newest by prefix.
+    - uses: actions/cache/restore@v4
+      with:
+        path: .radar-state/job-${{ inputs.job }}.json
+        key: radar-job-${{ inputs.job }}-${{ github.run_id }}
+        restore-keys: radar-job-${{ inputs.job }}-
+    - uses: actions/cache/restore@v4
+      with:
+        path: .radar-state/snapshot.json
+        key: radar-snapshot-${{ github.run_id }}
+        restore-keys: radar-snapshot-

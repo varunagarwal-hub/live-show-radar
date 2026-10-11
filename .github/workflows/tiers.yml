@@ -1,0 +1,39 @@
+name: tiers
+# Every 15 minutes: tier watcher + sale-start and decide-by reminders.
+# Reminders use a window (sale within 30 min), so a run GitHub delays still sends them in time.
+on:
+  schedule:
+    - cron: "2,17,32,47 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: tiers
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tiers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          job: tiers
+      - run: pnpm job:tiers
+        env:
+          RADAR_DRY_RUN: ${{ vars.RADAR_DRY_RUN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+      - uses: ./.github/actions/save-state
+        if: always()
+        with:
+          job: tiers

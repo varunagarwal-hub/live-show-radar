@@ -1,0 +1,43 @@
+name: sunday
+# Sundays at 09:00 IST (03:30 UTC): self-check for missed shows, playlist refresh, digest.
+on:
+  schedule:
+    - cron: "30 3 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: sunday
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sunday:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          job: sunday
+      - run: pnpm job:sunday
+        env:
+          RADAR_DRY_RUN: ${{ vars.RADAR_DRY_RUN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
+          SETLISTFM_API_KEY: ${{ secrets.SETLISTFM_API_KEY }}
+          MUSICBRAINZ_CONTACT: ${{ secrets.MUSICBRAINZ_CONTACT }}
+      - uses: ./.github/actions/save-state
+        if: always()
+        with:
+          job: sunday

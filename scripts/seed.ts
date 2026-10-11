@@ -111,7 +111,8 @@ for (const s of SHOWS) {
     date,
     endDate: s.endDays ? addDays(today, s.endDays) : null,
     eventType: s.type ?? "concert",
-    ticketUrl: s.source === "district" ? "https://www.district.in/events/" : null,
+    // No ticket links: sample shows must not send the tier watcher to real pages.
+    ticketUrl: null,
     saleStartsAt: s.sale ? hoursFromNow(s.sale) : null,
     earlyBirdStatus: s.eb,
     earlyBirdOpensAt: s.ebOpens ? hoursFromNow(s.ebOpens) : null,

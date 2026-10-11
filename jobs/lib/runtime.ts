@@ -1,3 +1,4 @@
+import "../../scripts/load-env";
 import { radarConfig, optionalEnv } from "@radar/config";
 import {
   alertChat,

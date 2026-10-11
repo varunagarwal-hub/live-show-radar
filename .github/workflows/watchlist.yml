@@ -1,0 +1,47 @@
+name: watchlist
+# Daily at 06:10 IST (00:40 UTC): Spotify sync, priority tiers, MusicBrainz IDs, handle
+# proposals, Instagram token refresh.
+on:
+  schedule:
+    - cron: "40 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: watchlist
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  watchlist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+        with:
+          job: watchlist
+      - run: pnpm job:watchlist
+        env:
+          RADAR_DRY_RUN: ${{ vars.RADAR_DRY_RUN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
+          MUSICBRAINZ_CONTACT: ${{ secrets.MUSICBRAINZ_CONTACT }}
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          GRAPH_API_VERSION: ${{ vars.GRAPH_API_VERSION }}
+      - uses: ./.github/actions/save-state
+        if: always()
+        with:
+          job: watchlist

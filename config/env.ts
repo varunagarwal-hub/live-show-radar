@@ -43,7 +43,9 @@ export type EnvKey = keyof Env;
 
 export function requireEnv<K extends EnvKey>(keys: readonly K[], source: NodeJS.ProcessEnv = process.env): Pick<Env, K> {
   const mask = Object.fromEntries(keys.map((k) => [k, true])) as Partial<Record<EnvKey, true>>;
-  const result = (EnvSchema.pick(mask as Record<EnvKey, true>) as z.ZodType).safeParse(source);
+  // Unset GitHub Actions variables arrive as "", which must not defeat the defaults.
+  const cleaned = Object.fromEntries(keys.map((k) => [k, source[k] === "" ? undefined : source[k]]));
+  const result = (EnvSchema.pick(mask as Record<EnvKey, true>) as z.ZodType).safeParse(cleaned);
   if (!result.success) {
     // Name the missing keys, never their values.
     const names = [...new Set(result.error.issues.map((i) => String(i.path[0])))].join(", ");
