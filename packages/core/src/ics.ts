@@ -111,7 +111,7 @@ export function buildCalendar(shows: IcsShow[], opts: { name?: string; now?: Dat
     "PRODID:-//Live Show Radar//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    foldLine(`X-WR-CALNAME:${icsEscape(opts.name ?? "Live Show Radar")}`),
+    foldLine(`X-WR-CALNAME:${icsEscape(opts.name ?? "Early Access")}`),
     "X-WR-TIMEZONE:Asia/Kolkata",
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
     "X-PUBLISHED-TTL:PT1H",

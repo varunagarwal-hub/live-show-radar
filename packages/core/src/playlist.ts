@@ -79,7 +79,7 @@ export async function ensurePlaylist(h: DbHandle, sp: SpotifyClient, env: Playli
   if (!id || !url) {
     const p = await sp.createPlaylist(
       playlistName(a.name, e.city, e.date),
-      basis === "setlists" ? `What ${a.name} has been playing live lately, most-played first. Made by Live Show Radar.` : `${a.name}'s latest releases. Made by Live Show Radar.`,
+      basis === "setlists" ? `What ${a.name} has been playing live lately, most-played first. Made by Early Access.` : `${a.name}'s latest releases. Made by Early Access.`,
     );
     id = p.id;
     url = p.url;

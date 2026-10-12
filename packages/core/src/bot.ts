@@ -35,7 +35,7 @@ export interface BotDeps {
 }
 
 const HELP =
-  "I'm your live show radar. I'll message you when an artist you follow announces a show in India.\n\n" +
+  "I'm Early Access, your live show radar. I'll message you when an artist you follow announces a show in India.\n\n" +
   "Ask me anything about upcoming shows, for example:\n" +
   "• anything in Bengaluru in December under ₹2,000?\n" +
   "• what do I need to decide on this week?\n" +

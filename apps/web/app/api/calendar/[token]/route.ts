@@ -32,12 +32,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
       decision: r.decision as "going" | "maybe",
       sourceUrls: srcs.filter((s) => s.eventId === r.e.id && s.url).map((s) => s.url!),
     })),
-    { name: "Live Show Radar" },
+    { name: "Early Access" },
   );
   return new Response(ics, {
     headers: {
       "content-type": "text/calendar; charset=utf-8",
-      "content-disposition": 'inline; filename="live-show-radar.ics"',
+      "content-disposition": 'inline; filename="early-access.ics"',
       "cache-control": "private, max-age=900",
     },
   });

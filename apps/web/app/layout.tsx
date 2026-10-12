@@ -10,7 +10,7 @@ const display = Big_Shoulders({ subsets: ["latin"], weight: "variable", axes: ["
 const body = Schibsted_Grotesk({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Live Show Radar",
+  title: "Early Access",
   description: "Every show your artists announce in India, before the early-birds are gone.",
   robots: { index: false, follow: false },
 };
@@ -60,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="frame">
           <header className="masthead">
             <Link href="/" className="wordmark">
-              Live Show Radar
+              Early Access
               <small suppressHydrationWarning>Bengaluru &amp; beyond · {mastheadDate()}</small>
             </Link>
             <DesktopNav />
