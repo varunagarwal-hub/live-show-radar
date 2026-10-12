@@ -22,7 +22,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
     .from(events)
     .innerJoin(artists, eq(events.artistId, artists.id))
     .innerJoin(decisions, eq(decisions.eventId, events.id))
-    .where(and(inArray(decisions.status, ["going", "maybe"]), isNotNull(events.date), gte(events.date, since), eq(events.status, "announced")));
+    .where(and(inArray(decisions.status, ["going", "maybe"]), isNotNull(events.date), gte(events.date, since), inArray(events.status, ["announced", "possible"])));
   const ids = rows.map((r) => r.e.id);
   const srcs = ids.length ? await db.select().from(eventSources).where(inArray(eventSources.eventId, ids)) : [];
   const ics = buildCalendar(

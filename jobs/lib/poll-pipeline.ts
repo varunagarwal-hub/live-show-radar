@@ -1,4 +1,4 @@
-import { and, asc, eq, lt } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, lt, sql } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
 import {
   dedupKey,
@@ -50,10 +50,33 @@ export interface PollResult {
 const MAX_ATTEMPTS = 5;
 
 /** Items worth extracting: Instagram and email always; listings/news only if they name a watched artist. */
+const SHOW_WORDS = /\b(concerts?|tour|tours|touring|live|gigs?|shows?|tickets?|play|plays|playing|perform(s|ing|ance)?|festival|line-?up|headlin(e|es|ing))\b/i;
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const INDIA_WORDS = new RegExp(`\\b(india|indian|${radarConfig.cities.flatMap((c) => [c.name, ...c.aliases]).map(escapeRe).join("|")})\\b`, "i");
+
+/**
+ * News must look like an Indian show announcement, not just mention the artist: big names get
+ * daily coverage that has nothing to do with Indian dates, and every article costs an LLM call.
+ */
+export function newsLooksRelevant(text: string): boolean {
+  // Ignore the labels the news source adds itself ("News headline:", "Publisher: …").
+  const body = text.replace(/^News headline:\s*/i, "").replace(/\nPublisher:.*$/is, "");
+  return SHOW_WORDS.test(body) && INDIA_WORDS.test(body);
+}
+
+/** Announcement-first sources are extracted before news when there's a backlog. */
+const SOURCE_PRIORITY = sql`case ${rawItems.source} when 'email' then 0 when 'instagram' then 1 when 'district' then 2 when 'skillbox' then 2 when 'bookmyshow' then 2 else 3 end`;
+
+async function loadImage(h: DbHandle, id: number, mime: string) {
+  const [row] = await h.db.select({ data: rawItems.imageData }).from(rawItems).where(eq(rawItems.id, id));
+  return row?.data ? { mime, data: Buffer.from(row.data) } : null;
+}
+
 export function prefilter(items: RawItem[], snapshot: Snapshot): RawItem[] {
   const names = snapshot.artists.filter((a) => !a.muted).flatMap((a) => [a.name, ...a.aliases]).map(normalizeName).filter((n) => n.length >= 3);
   return items.filter((it) => {
     if (it.source === "instagram" || it.source === "email") return true;
+    if (it.source === "news") return newsLooksRelevant(it.text);
     if (it.meta.artistId || it.meta.structured) return true;
     const hay = ` ${normalizeName(it.text)} `;
     return names.some((n) => hay.includes(` ${n} `));
@@ -148,11 +171,14 @@ export async function runPoll(d: PollDeps): Promise<PollResult> {
   //    an hour via the heartbeat flush, so quiet runs stay database-free.
   if (h || d.state.lastFlushAt === null || d.now.getTime() - Date.parse(d.state.lastFlushAt) > 55 * 60_000) {
     const hh = await db();
+    // Everything except the poster bytes: a batch of images can exceed Neon's 64 MB response
+    // limit, so each image is loaded on its own just before extraction.
+    const { imageData: _imageData, ...columns } = getTableColumns(rawItems);
     const pending = await hh.db
-      .select()
+      .select(columns)
       .from(rawItems)
       .where(and(eq(rawItems.processed, false), lt(rawItems.processAttempts, MAX_ATTEMPTS)))
-      .orderBy(asc(rawItems.fetchedAt))
+      .orderBy(SOURCE_PRIORITY, asc(rawItems.fetchedAt))
       .limit(d.maxExtractions ?? 40);
     stats.pending = pending.length;
     if (pending.length) {
@@ -160,6 +186,11 @@ export async function runPoll(d: PollDeps): Promise<PollResult> {
       const cache = new EventCache(hh);
       let llmDown = false;
       for (const item of pending) {
+        if (item.source === "news" && !newsLooksRelevant(item.text)) {
+          await hh.db.update(rawItems).set({ processed: true, processedAt: d.now, lastError: "skipped: not about an Indian show" }).where(eq(rawItems.id, item.id));
+          stats.newsSkipped = (stats.newsSkipped ?? 0) + 1;
+          continue;
+        }
         try {
           let ex: Extraction;
           const structured = ExtractionSchema.safeParse(item.meta.structured);
@@ -176,7 +207,7 @@ export async function runPoll(d: PollDeps): Promise<PollResult> {
                 url: item.url,
                 postedBy: typeof item.meta.handle === "string" ? item.meta.handle : null,
                 publishedAt: item.publishedAt,
-                image: item.imageData && item.imageMime ? { mime: item.imageMime, data: Buffer.from(item.imageData) } : null,
+                image: item.imageMime ? await loadImage(hh, item.id, item.imageMime) : null,
               },
               d.now,
             );

@@ -58,7 +58,7 @@ const col = (c: AnyColumn, name: string) => sql`${c}`.as(name);
 export function buildAskQuery(h: DbHandle, f: AskFilter, now = new Date()): { sql: string; params: unknown[] } {
   const today = istDate(now);
   const conds: (SQL | undefined)[] = [
-    inArray(events.status, ["announced"]),
+    inArray(events.status, ["announced", "possible"]),
     eq(artists.muted, false),
     f.date_from ? gte(events.date, f.date_from) : or(gte(events.date, today), isNull(events.date)),
   ];

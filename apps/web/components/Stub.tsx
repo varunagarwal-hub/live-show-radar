@@ -61,6 +61,7 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
           {price && <span>{price}</span>}
           {show.weekPart && !show.isHome && <span>{show.weekPart}</span>}
           {show.handleUnconfirmed && <span>handle unconfirmed</span>}
+          {show.unconfirmed && <span className="highlight">Unconfirmed: check before buying</span>}
         </div>
         {!mini && show.clashes.length > 0 && (
           <ul className="stub-notes" aria-label="Clashes">

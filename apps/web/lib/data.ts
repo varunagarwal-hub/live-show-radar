@@ -28,6 +28,8 @@ export interface ShowCard {
   earlyBirdClosesAt: string | null;
   saleStartsAt: string | null;
   urgency: "urgent" | "normal" | "possible";
+  /** Found only by a low-confidence source; worth checking before buying. */
+  unconfirmed: boolean;
   decision: "going" | "maybe" | "pass" | "not_interested" | null;
   deadline: { at: string; kind: "early_bird_closes" | "early_bird_opens" | "sale_starts" } | null;
   soldOut: boolean;
@@ -71,7 +73,8 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
   const { db } = await getDb();
   const today = istDate(now);
   const conds = [
-    eq(events.status, "announced"),
+    // Possible (low-confidence) shows are listed too, marked Unconfirmed: you may have decided on them.
+    inArray(events.status, ["announced", "possible"]),
     eq(artists.muted, false),
     q.includeUndated === false ? gte(events.date, q.from ?? today) : or(gte(events.date, q.from ?? today), isNull(events.date)),
   ];
@@ -120,6 +123,7 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       earlyBirdClosesAt: iso(e.earlyBirdClosesAt),
       saleStartsAt: iso(e.saleStartsAt),
       urgency: e.urgency,
+      unconfirmed: e.status === "possible",
       decision: decision ?? null,
       deadline: d ? { at: d.at.toISOString(), kind: d.kind } : null,
       soldOut: e.tiers.length > 0 && e.tiers.every((t) => t.status === "sold_out"),
