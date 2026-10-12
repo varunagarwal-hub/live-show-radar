@@ -133,7 +133,7 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
               {show.ticketUrl ? (
                 <TicketButton href={show.ticketUrl} label="Tickets" sub="Open booking" />
               ) : (
-                <TicketButton href={show.searchUrl} label="Tickets" sub="Best match" />
+                <TicketButton href={show.searchUrl} label="Tickets" sub="Search" />
               )}
               {show.bioUrl && !show.ticketUrl && <WristbandButton href={show.bioUrl} label="Artist's links" />}
               {decision === "going" && show.playlistUrl && <CassetteButton href={show.playlistUrl} />}

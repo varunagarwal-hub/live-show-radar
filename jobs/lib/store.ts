@@ -202,6 +202,7 @@ export function toAlertEvent(row: EventRow, artist: Pick<WatchArtist, "name" | "
     earlyBirdClosesAt: row.earlyBirdClosesAt,
     saleStartsAt: row.saleStartsAt,
     ticketUrl: row.ticketUrl,
+    bookingUrl: row.bookingUrl,
     confidence: row.confidence,
     urgency: row.urgency,
     handleUnconfirmed: row.handleUnconfirmed,

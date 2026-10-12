@@ -19,8 +19,9 @@ export interface ShowCard {
   date: string | null;
   endDate: string | null;
   eventType: string;
+  /** Source ticket link, else the booking page found by the lookup (booking.ts). */
   ticketUrl: string | null;
-  /** Artist's Instagram bio link, and a ticket search, for shows without a direct link. */
+  /** Artist's Instagram bio link, and a plain ticket search, for shows without a booking page. */
   bioUrl: string | null;
   searchUrl: string;
   tiers: TierJson[];
@@ -123,7 +124,7 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       date: e.date,
       endDate: e.endDate,
       eventType: e.eventType,
-      ticketUrl: e.ticketUrl,
+      ticketUrl: e.ticketUrl ?? e.bookingUrl,
       bioUrl: isBookingLikeUrl(a.bioUrl) ? a.bioUrl : null,
       searchUrl: ticketSearchUrl(a.name, e.city, e.date),
       tiers: e.tiers,

@@ -50,7 +50,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <header className="tour-head">
-        <p className="tour-kicker">World tour? No: your tour.</p>
+        <p className="tour-kicker">{tourKicker(shows)}</p>
         <h1 className="tour-title">
           <span>Tour dates</span>
           <span className="tour-month">
@@ -119,4 +119,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       </div>
     </>
   );
+}
+
+/** "4 shows · 2 going · 1 maybe": what this month's page holds, in tour-poster caps. */
+function tourKicker(shows: { decision: string | null }[]): string {
+  if (!shows.length) return "On the road";
+  const going = shows.filter((s) => s.decision === "going").length;
+  const maybe = shows.filter((s) => s.decision === "maybe").length;
+  return [`${shows.length} show${shows.length === 1 ? "" : "s"}`, going ? `${going} going` : null, maybe ? `${maybe} maybe` : null].filter(Boolean).join(" · ");
 }

@@ -1,21 +1,38 @@
 /* Early Access: the concert layer. Stage hero, marquee, split-flap, gig-object buttons,
-   tear-to-go, tour-dates calendar, equalizer and neon. Motion is driven by GSAP and switched
+   tear-to-go, tour-dates calendar, equalizer and logo. Motion is driven by GSAP and switched
    off entirely under prefers-reduced-motion. */
 
+/* "In the venue" (light): the stage is a printed poster panel in the page's own paper and ink,
+   lit by multiply-blended spotlights, so it belongs to the page instead of punching a dark hole
+   in it. "After the show" (dark): a black stage with glowing lights. */
 :root {
   /* printed objects (cassette, boarding pass) keep their paper colour in both themes */
   --object: #e4e6e1;
-  --stage: #141c33;
-  --stage-ink: #e9ebe6;
+  --stage: #d3d7cd;
+  --stage-ink: #1b2745;
+  --stage-crowd: rgb(27 39 69 / 0.35);
+  --spot-blend: multiply;
+  --spot-opacity: 0.22;
+  --marquee: #1b2745;
   --bulb: #ffe800;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --stage: #0b1020;
+    --stage-ink: #e9ebe6;
+    --stage-crowd: color-mix(in srgb, #e9ebe6 55%, transparent);
+    --spot-blend: screen;
+    --spot-opacity: 1;
+    --marquee: #0b1020;
   }
 }
 :root[data-theme="dark"] {
   --stage: #0b1020;
+  --stage-ink: #e9ebe6;
+  --stage-crowd: color-mix(in srgb, #e9ebe6 55%, transparent);
+  --spot-blend: screen;
+  --spot-opacity: 1;
+  --marquee: #0b1020;
 }
 
 /* ---------- venue marquee ---------- */
@@ -23,7 +40,7 @@
 .marquee {
   position: relative;
   margin: 14px calc(var(--gutter) * -1) 0;
-  background: var(--stage);
+  background-color: var(--marquee);
   color: var(--bulb);
   overflow: hidden;
   padding: 13px 0;
@@ -176,7 +193,8 @@
   pointer-events: none;
   transform-origin: 50% 0;
   clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%);
-  mix-blend-mode: screen;
+  mix-blend-mode: var(--spot-blend);
+  opacity: var(--spot-opacity);
   filter: blur(2px);
 }
 .spot-l {
@@ -213,7 +231,7 @@
   pointer-events: none;
 }
 .crowd circle {
-  fill: color-mix(in srgb, var(--stage-ink) 55%, transparent);
+  fill: var(--stage-crowd);
 }
 @media (min-width: 760px) {
   .crowd {
@@ -496,9 +514,11 @@
 }
 .tour-kicker {
   margin: 0;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: var(--pink);
-  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 .tour-title {
   margin: 0;
@@ -665,36 +685,89 @@
   background: var(--pink);
 }
 
-/* ---------- neon wordmark after the show ---------- */
+/* ---------- logo: ticket-stub mark + wordmark (no glow, stays inside the masthead) ---------- */
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .wordmark {
-    color: #fff4fb;
-    text-shadow: 0 0 4px var(--pink), 0 0 14px var(--pink), 0 0 30px color-mix(in srgb, var(--pink) 60%, transparent);
-    animation: neon-on 1.6s steps(1) 1 both;
-  }
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
-:root[data-theme="dark"] .wordmark {
-  color: #fff4fb;
-  text-shadow: 0 0 4px var(--pink), 0 0 14px var(--pink), 0 0 30px color-mix(in srgb, var(--pink) 60%, transparent);
-  animation: neon-on 1.6s steps(1) 1 both;
+.logo-mark {
+  flex: none;
+  width: clamp(40px, 9vw, 54px);
+  height: auto;
+  rotate: -6deg;
 }
-.wordmark small {
-  text-shadow: none;
+.logo-mark path:first-child {
+  fill: var(--pink);
+}
+.logo-perf {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 2;
+  stroke-dasharray: 2.5 2.5;
+}
+.logo-star {
+  fill: var(--paper);
+}
+.logo-text {
+  display: block;
+  min-width: 0;
+}
+.wordmark:hover .logo-mark {
+  rotate: 0deg;
+  transition: rotate 0.2s ease-out;
+}
+
+.masthead-tools {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.signout {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--ink-soft);
+  background: transparent;
+  border: 0;
+  padding: 6px 4px;
+  min-height: 36px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-@keyframes neon-on {
-  0%,
-  12%,
-  20%,
-  34% {
-    opacity: 0.25;
+.signout:hover {
+  color: var(--ink);
+}
+.linkish {
+  font: inherit;
+  font-family: var(--display);
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--pink);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+/* Phones: log out lives on the More page, keeping the masthead to the logo and theme switch. */
+@media (max-width: 899px) {
+  .masthead-tools .signout {
+    display: none;
   }
-  8%,
-  16%,
-  26%,
-  100% {
-    opacity: 1;
+}
+@media (max-width: 520px) {
+  .masthead {
+    align-items: center;
+  }
+  .masthead-tools .theme-toggle {
+    padding: 5px 9px;
   }
 }
 
@@ -703,7 +776,6 @@
 @media (prefers-reduced-motion: reduce) {
   .marquee,
   .eq i,
-  .wordmark,
   .cassette-btn:hover .reel {
     animation: none !important;
   }
@@ -821,4 +893,61 @@
     left: 0;
     right: 0;
   }
+}
+
+/* ---------- wide screens: use the laptop's width ---------- */
+
+@media (min-width: 1280px) {
+  :root {
+    --gutter: 32px;
+  }
+  .frame {
+    max-width: 1560px;
+  }
+  .stage {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    min-height: 540px;
+  }
+  .stage-inner {
+    padding: 48px 56px 160px;
+  }
+  .stage-art {
+    margin-right: 56px;
+  }
+  .stubs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1800px) {
+  .frame {
+    max-width: 1760px;
+  }
+  .stubs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ---------- health: ticketing coverage note ---------- */
+
+.coverage {
+  margin: 10px 0 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  max-width: 70ch;
+}
+.coverage li {
+  position: relative;
+  padding-left: 22px;
+}
+.coverage li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 10px;
+  height: 10px;
+  background: var(--blue);
+  rotate: 45deg;
 }

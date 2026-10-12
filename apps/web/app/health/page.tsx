@@ -7,12 +7,16 @@ export const dynamic = "force-dynamic";
 
 const when = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 const fmt = (d: Date | null) => (d ? when.format(d) : "never");
+const TICKETING = new Set(["district", "bookmyshow"]);
 const NAMES: Record<string, string> = { instagram: "Instagram", district: "District", bookmyshow: "BookMyShow", skillbox: "SkillBox", news: "Google News", email: "Fan-app emails" };
 
 export default async function HealthPage() {
   await requireUser();
   const { health, runs, accounts, lastOk } = await loadHealth();
-  const sources = health.filter((h) => !h.source.endsWith(":notes"));
+  // Ticketing sites that turn away servers aren't broken sources, just closed doors: they're
+  // explained under "Ticketing sites" instead of showing as failures.
+  const closed = new Set(health.filter((h) => TICKETING.has(h.source) && h.lastError?.startsWith("blocked")).map((h) => h.source));
+  const sources = health.filter((h) => !h.source.endsWith(":notes") && !closed.has(h.source));
   const notes = new Map(health.filter((h) => h.source.endsWith(":notes")).map((h) => [h.source.replace(/:notes$/, ""), h.lastError]));
   const errors = runs.filter((r) => r.status === "error").slice(0, 10);
   const staleCutoff = Date.now() - radarConfig.health.staleJobHours * 3_600_000;
@@ -52,6 +56,33 @@ export default async function HealthPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="section" aria-labelledby="ticketing">
+        <h2 id="ticketing" className="section-title">Ticketing sites</h2>
+        <p className="lede">
+          District and BookMyShow turn away automated
+          readers, and Early Access never tries to get around that. Their shows still reach you:
+        </p>
+        <ul className="coverage">
+          <li>
+            <b>Their Instagram accounts</b> (@bookmyshow.live, @districtupdates) among {accounts.filter((a) => a.active).length} promoter and venue pages, read every 30 minutes.
+          </li>
+          <li>
+            <b>Artists&apos; own posts</b>, Google News, and your Bandsintown and Songkick emails.
+          </li>
+          <li>
+            <b>Booking pages</b>: each show&apos;s exact BookMyShow or District page is found from the artist&apos;s link-in-bio, or by a web search for shows
+            you&apos;re going to.
+          </li>
+          <li>
+            <b>SkillBox</b> is read directly.
+          </li>
+        </ul>
+        <p className="lede">
+          What this can&apos;t do: watch price tiers on BookMyShow and District pages. Sale-start and early-bird times still come through when they&apos;re
+          announced.
+        </p>
       </section>
 
       <section className="section">

@@ -12,6 +12,8 @@ const ev = (over: Partial<SnapshotEvent> = {}): SnapshotEvent => ({
   date: "2026-12-13",
   endDate: null,
   ticketUrl: null,
+  bookingUrl: null,
+  bookingCheckedAt: null,
   saleStartsAt: "2026-10-12T06:30:00.000Z", // 12:00 IST
   earlyBirdStatus: "unknown",
   earlyBirdOpensAt: null,

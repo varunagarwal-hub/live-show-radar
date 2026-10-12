@@ -91,7 +91,7 @@ export function Poster({ show, kicker = "Your next show", sameDay = false }: { s
             {show.ticketUrl ? (
               <TicketButton href={show.ticketUrl} label="Tickets" sub="Open booking" />
             ) : (
-              <TicketButton href={show.searchUrl} label="Tickets" sub="Best match" />
+              <TicketButton href={show.searchUrl} label="Tickets" sub="Search" />
             )}
             {show.playlistUrl && <CassetteButton href={show.playlistUrl} />}
             {show.bioUrl && !show.ticketUrl && <WristbandButton href={show.bioUrl} label="Artist's links" />}

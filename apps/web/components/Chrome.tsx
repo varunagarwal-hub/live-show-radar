@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 const LINKS = [
@@ -88,6 +89,17 @@ export function ThemeToggle() {
       aria-label={theme ? `Switch to ${next === "dark" ? "after the show (dark)" : "in the venue (light)"} theme` : "Switch theme"}
     >
       {theme === "dark" ? "Lights up" : "After the show"}
+    </button>
+  );
+}
+
+/** Ends the Google session; hidden on the sign-in page itself. */
+export function SignOutButton({ className = "signout" }: { className?: string }) {
+  const path = usePathname();
+  if (path.startsWith("/signin")) return null;
+  return (
+    <button type="button" className={className} onClick={() => signOut({ callbackUrl: "/signin" })}>
+      Log out
     </button>
   );
 }

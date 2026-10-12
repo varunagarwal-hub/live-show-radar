@@ -25,3 +25,4 @@ export * from "./playlist";
 export * from "./watchlist";
 export * from "./selfcheck";
 export * from "./digest";
+export * from "./booking";

@@ -177,46 +177,44 @@ export interface AlertEvent {
   sources: { source: string; url: string | null }[];
   /** Artist's Instagram bio link, shown when there is no direct ticket link. */
   bioUrl?: string | null;
+  /** Booking page found by the lookup in the tiers job (booking.ts). */
+  bookingUrl?: string | null;
 }
 
-/** A web search for the booking page: the fallback when no source gave a ticket link. */
-// Event-page paths only: a bare domain lets the search land on a site's home or city page
-// (e.g. BookMyShow's /explore), which isn't a booking link.
-const TICKET_SITES = ["in.bookmyshow.com/events", "district.in/events", "skillboxes.com/events", "insider.in", "thumpn.com/event"];
-
 /**
- * "Best match" booking link: a feeling-lucky search (DuckDuckGo !ducky) limited to Indian
- * ticketing sites, so one tap usually opens the event's booking page itself. It can land on the
- * wrong event, which is why it is always labelled "best match".
+ * Plain web search for the show's tickets: the last resort when neither a source, the artist's
+ * bio page nor the booking lookup (booking.ts) found the page itself. Labelled as a search.
  */
 export function ticketSearchUrl(artistName: string, city: string, date: string | null): string {
-  const when = date ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`)) : "";
-  const sites = TICKET_SITES.map((s) => `site:${s}`).join(" OR ");
-  // The quoted name keeps results to that artist; the date steers towards the exact show.
-  const q = `!ducky "${artistName.replace(/"/g, "")}" ${city === "TBA" ? "" : city} ${when} tickets ${sites}`.replace(/\s+/g, " ").trim();
-  return `https://duckduckgo.com/?q=${encodeURIComponent(q)}`;
+  const when = date ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`)) : "";
+  const q = `${artistName} ${city === "TBA" ? "" : city} ${when} tickets`.replace(/\s+/g, " ").trim();
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
 }
 
 const LINK_PAGES = /(^|\.)(linktr\.ee|lnk\.to|bio\.link|beacons\.ai|hoo\.be|solo\.to|linkin\.bio|komi\.io|tap\.bio|campsite\.bio|later\.com|direct\.me|fanlink\.tv|ffm\.to)$/i;
-const TICKETING = /(^|\.)(district\.in|bookmyshow\.com|skillboxes\.com|insider\.in|thumpn\.com|ticketmaster\.[a-z.]+|bandsintown\.com|songkick\.com|platinumlist\.net|zomato\.com|paytm\.com|townscript\.com|allevents\.in)$/i;
+const TICKETING = /(^|\.)(district\.in|bookmyshow\.com|skillboxes\.com|insider\.in|thumpn\.com|ticketmaster\.co\.in|zomato\.com|paytm\.com|townscript\.com)$/i;
+/** Ticketing and listing sites that can't book an Indian show (Ticketmaster US, Bandsintown…). */
+const NOT_INDIAN_BOOKING = /(^|\.)(ticketmaster\.(com|ca|co\.uk|de|com\.au)|livenation\.com|axs\.com|bandsintown\.com|songkick\.com|seatgeek\.com|stubhub\.[a-z.]+|eventbrite\.[a-z.]+|dice\.fm|allevents\.in)$/i;
 
 /** Only bio links that plausibly lead to tickets: link-in-bio pages, ticketing sites, tour pages. */
 export function isBookingLikeUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
     const u = new URL(url);
+    if (NOT_INDIAN_BOOKING.test(u.hostname)) return false;
     return LINK_PAGES.test(u.hostname) || TICKETING.test(u.hostname) || /tour|ticket|shows|live|concert|gigs?\b/i.test(u.pathname + u.hostname);
   } catch {
     return false;
   }
 }
 
-/** "Open tickets", or the artist's link page plus a search when no direct link is known. */
-export function bookingLines(e: Pick<AlertEvent, "ticketUrl" | "bioUrl" | "artistName" | "city" | "date">): string[] {
-  if (e.ticketUrl) return [`🛒 ${link(e.ticketUrl, "Open tickets")}`];
+/** "Open tickets", or the artist's link page plus a plain search when no booking page is known. */
+export function bookingLines(e: Pick<AlertEvent, "ticketUrl" | "bookingUrl" | "bioUrl" | "artistName" | "city" | "date">): string[] {
+  const direct = e.ticketUrl ?? e.bookingUrl;
+  if (direct) return [`🛒 ${link(direct, "Open tickets")}`];
   const lines: string[] = [];
   if (isBookingLikeUrl(e.bioUrl)) lines.push(`🛒 ${link(e.bioUrl!, "Artist's links")} (booking links are usually here)`);
-  lines.push(`🎟 ${link(ticketSearchUrl(e.artistName, e.city, e.date), "Tickets (best match)")}`);
+  lines.push(`🔎 ${link(ticketSearchUrl(e.artistName, e.city, e.date), "Search for tickets")} (no booking page found yet)`);
   return lines;
 }
 

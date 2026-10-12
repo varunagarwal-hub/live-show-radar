@@ -5,6 +5,12 @@ import {
   dueReminders,
   esc,
   eventKeyboard,
+  fetchLinkPage,
+  isLinkPage,
+  matchBookingLink,
+  searchBookingUrl,
+  type BookingLink,
+  type BookingShow,
   formatReminder,
   istDate,
   llmTierState,
@@ -39,7 +45,31 @@ export interface TiersDeps {
   log: (m: string) => void;
   fetchPage?: PageFetcher;
   maxPages?: number;
+  /** Booking lookup (booking.ts): the Groq key enables the web search step. */
+  groqKey?: string;
+  groqModel?: string;
+  linkPage?: (url: string) => Promise<BookingLink[]>;
+  searchBooking?: (show: BookingShow) => Promise<string | null>;
 }
+
+/** Ticketing sites that block servers: the tier watcher can't read them, so it doesn't try. */
+const UNREADABLE_HOSTS = /(^|\.)(district\.in|bookmyshow\.com)$/i;
+const readable = (url: string) => {
+  try {
+    return !UNREADABLE_HOSTS.test(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+};
+
+const HOUR = 3_600_000;
+/** Bio pages are cheap to re-read; a web search costs ~15k Groq tokens, so it is rationed. */
+const BIO_RECHECK_HOURS = 12;
+const SEARCH_RECHECK_HOURS = 24;
+const LOOKUPS_PER_RUN = 6;
+const SEARCHES_PER_RUN = 1;
+/** Groq's free tier allows 200k tokens a day, shared with the extraction fallback: ~90k for this. */
+const SEARCHES_PER_DAY = 6;
 
 const toDate = (s: string | null) => (s ? new Date(s) : null);
 
@@ -59,6 +89,7 @@ export function snapshotToAlertEvent(e: SnapshotEvent, bioUrl: string | null = n
     earlyBirdClosesAt: toDate(e.earlyBirdClosesAt),
     saleStartsAt: toDate(e.saleStartsAt),
     ticketUrl: e.ticketUrl,
+    bookingUrl: e.bookingUrl,
     confidence: e.confidence,
     urgency: e.urgency,
     handleUnconfirmed: e.handleUnconfirmed,
@@ -101,10 +132,12 @@ export async function runTiers(d: TiersDeps) {
     snapshot.sentAlertKeys.push(snapshotAlertKey(r.dedupKey, d.dryRun));
   }
 
+  await lookUpBookingPages(d, snapshot, today, stats, db).then((n) => (wrote ||= n > 0));
+
   if (radarConfig.features.tierWatcher) {
     const fetchPage = d.fetchPage ?? politeFetch;
     const watch = snapshot.upcoming.filter(
-      (e) => e.ticketUrl && e.urgency !== "possible" && (!e.date || (e.endDate ?? e.date) >= today) && e.decision !== "pass" && e.decision !== "not_interested",
+      (e) => e.ticketUrl && readable(e.ticketUrl) && e.urgency !== "possible" && (!e.date || (e.endDate ?? e.date) >= today) && e.decision !== "pass" && e.decision !== "not_interested",
     );
     for (const e of watch.slice(0, d.maxPages ?? 30)) {
       try {
@@ -173,4 +206,70 @@ export async function runTiers(d: TiersDeps) {
 
   if (wrote) snapshot = await loadSnapshot(await db(), d.now);
   return { stats, snapshot, dbOpened: h !== null };
+}
+
+/**
+ * Finds booking pages for upcoming shows that have no ticket link: first on the artist's
+ * link-in-bio page, then (rationed) by web search. Returns how many rows it updated.
+ */
+async function lookUpBookingPages(d: TiersDeps, snapshot: Snapshot, today: string, stats: Record<string, number>, db: () => Promise<DbHandle>): Promise<number> {
+  const now = d.now.getTime();
+  const rank = (e: SnapshotEvent) => (e.decision === "going" ? 0 : e.decision === "maybe" ? 1 : e.urgency === "urgent" ? 2 : 3);
+  const due = snapshot.upcoming
+    .filter(
+      (e) =>
+        !e.ticketUrl &&
+        !e.bookingUrl &&
+        e.city !== "TBA" &&
+        e.urgency !== "possible" &&
+        e.decision !== "pass" &&
+        e.decision !== "not_interested" &&
+        (!e.date || e.date >= today) &&
+        (!e.bookingCheckedAt || now - Date.parse(e.bookingCheckedAt) >= BIO_RECHECK_HOURS * HOUR),
+    )
+    .sort((a, b) => rank(a) - rank(b) || (a.date ?? "9999").localeCompare(b.date ?? "9999"))
+    .slice(0, LOOKUPS_PER_RUN);
+  if (!due.length) return 0;
+
+  const linkPage = d.linkPage ?? ((u: string) => fetchLinkPage(u));
+  const search = d.searchBooking ?? (d.groqKey ? (s: BookingShow) => searchBookingUrl(d.groqKey!, s, d.groqModel || undefined) : null);
+  const pages = new Map<string, BookingLink[]>();
+  let searches = 0;
+
+  for (const e of due) {
+    const show = { artistName: e.artistName, city: e.city, date: e.date };
+    let url: string | null = null;
+    const bio = snapshot.artists.find((a) => a.id === e.artistId)?.bioUrl ?? null;
+    if (bio && isLinkPage(bio)) {
+      try {
+        if (!pages.has(bio)) pages.set(bio, await linkPage(bio));
+        url = matchBookingLink(show, pages.get(bio)!);
+        if (url) stats.bookingFromBio = (stats.bookingFromBio ?? 0) + 1;
+      } catch (err) {
+        pages.set(bio, []);
+        d.log(`bio page ${bio}: ${(err as Error).message}`);
+      }
+    }
+    const searchKey = `booksearch:${e.id}`;
+    const lastSearch = d.state.cursors[searchKey];
+    const [day, used] = (d.state.cursors["booksearch:day"] ?? "").split("|");
+    const usedToday = day === today ? Number(used) || 0 : 0;
+    // Only for shows Karan is going to, might go to, or that are urgent: the rest keep the plain search.
+    const worthSearching = e.decision === "going" || e.decision === "maybe" || e.urgency === "urgent";
+    if (!url && search && worthSearching && searches < SEARCHES_PER_RUN && usedToday < SEARCHES_PER_DAY && (!lastSearch || now - Date.parse(lastSearch) >= SEARCH_RECHECK_HOURS * HOUR)) {
+      searches++;
+      d.state.cursors[searchKey] = d.now.toISOString();
+      d.state.cursors["booksearch:day"] = `${today}|${usedToday + 1}`;
+      try {
+        url = await search(show);
+        stats.bookingSearches = (stats.bookingSearches ?? 0) + 1;
+        if (url) stats.bookingFromSearch = (stats.bookingFromSearch ?? 0) + 1;
+      } catch (err) {
+        d.log(`booking search for event ${e.id}: ${(err as Error).message.slice(0, 200)}`);
+      }
+    }
+    await (await db()).db.update(events).set({ bookingUrl: url, bookingCheckedAt: d.now }).where(eq(events.id, e.id));
+  }
+  // Checked-at changed for every row, so the snapshot must be rebuilt either way.
+  return due.length;
 }

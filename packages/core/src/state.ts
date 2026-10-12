@@ -54,6 +54,8 @@ export const SnapshotEvent = z.object({
   date: DateStr,
   endDate: DateStr,
   ticketUrl: z.string().nullable(),
+  bookingUrl: z.string().nullable().default(null),
+  bookingCheckedAt: DateStr.default(null),
   saleStartsAt: DateStr,
   earlyBirdStatus: z.enum(["open", "opening", "sold_out", "none", "unknown"]),
   earlyBirdOpensAt: DateStr,

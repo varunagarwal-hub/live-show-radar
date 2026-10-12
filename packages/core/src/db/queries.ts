@@ -85,6 +85,8 @@ export function eventToSnapshotFields(e: EventRow) {
     date: e.date,
     endDate: e.endDate,
     ticketUrl: e.ticketUrl,
+    bookingUrl: e.bookingUrl,
+    bookingCheckedAt: iso(e.bookingCheckedAt),
     saleStartsAt: iso(e.saleStartsAt),
     earlyBirdStatus: e.earlyBirdStatus,
     earlyBirdOpensAt: iso(e.earlyBirdOpensAt),

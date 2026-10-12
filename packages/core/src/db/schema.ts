@@ -119,6 +119,9 @@ export const events = pgTable(
     endDate: date({ mode: "string" }),
     eventType: eventType().notNull().default("concert"),
     ticketUrl: text(),
+    /** Booking page found by the background web lookup (when no source gave a ticket link). */
+    bookingUrl: text(),
+    bookingCheckedAt: ts("booking_checked_at"),
     saleStartsAt: ts("sale_starts_at"),
     earlyBirdStatus: earlyBirdStatus().notNull().default("unknown"),
     earlyBirdOpensAt: ts("early_bird_opens_at"),
