@@ -223,7 +223,7 @@ if (cmd === "set" && names.includes("--clipboard")) {
   const present = GITHUB_SECRETS.filter((k) => env.get(k));
   const missing = GITHUB_SECRETS.filter((k) => !env.get(k));
   for (const k of present) {
-    const r = spawnSync("gh", ["secret", "set", k], { input: env.get(k), stdio: ["pipe", "ignore", "pipe"], encoding: "utf8", shell: process.platform === "win32" });
+    const r = spawnSync("gh", ["secret", "set", k], { input: env.get(k), stdio: ["pipe", "ignore", "pipe"], encoding: "utf8" });
     console.log(r.status === 0 ? `✓ ${k}` : `✗ ${k}: ${r.stderr.trim().split("\n")[0]}`);
   }
   if (missing.length) console.log(`\nNot set in .env yet (skipped): ${missing.join(", ")}`);
