@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
 import {
   diffTierState,
@@ -268,7 +268,11 @@ async function lookUpBookingPages(d: TiersDeps, snapshot: Snapshot, today: strin
         d.log(`booking search for event ${e.id}: ${(err as Error).message.slice(0, 200)}`);
       }
     }
-    await (await db()).db.update(events).set({ bookingUrl: url, bookingCheckedAt: d.now }).where(eq(events.id, e.id));
+    // Only ever fills an empty link: a cached snapshot can be older than a link stored since.
+    await (await db()).db
+      .update(events)
+      .set(url ? { bookingUrl: url, bookingCheckedAt: d.now } : { bookingCheckedAt: d.now })
+      .where(and(eq(events.id, e.id), isNull(events.bookingUrl)));
   }
   // Checked-at changed for every row, so the snapshot must be rebuilt either way.
   return due.length;

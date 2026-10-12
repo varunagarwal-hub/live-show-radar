@@ -122,3 +122,20 @@ describe("booking lookup", () => {
     expect(searched).toEqual(["Pune"]);
   });
 });
+
+describe("booking lookup with a stale snapshot", () => {
+  it("never erases a link stored after the snapshot was taken", async () => {
+    const now = new Date("2026-10-31T00:00:00Z");
+    const stale = await loadSnapshot(h, now);
+    await h.db.update(events).set({ bookingUrl: "https://in.bookmyshow.com/events/anuv-jain-kochi/ET00500002" }).where(eq(events.id, 22));
+    for (const e of stale.upcoming) e.bookingCheckedAt = null;
+    await runTiers({
+      getDb: async () => h, llm: () => fixtureLlm(), tg, chatId: "TEST_CHAT", dryRun: true, state, snapshot: stale, now, log: () => {},
+      fetchPage: async () => page("district-event-sold-out.html"),
+      linkPage: async () => [],
+      searchBooking: async () => null,
+    });
+    const [row] = await h.db.select({ url: events.bookingUrl }).from(events).where(eq(events.id, 22));
+    expect(row!.url).toBe("https://in.bookmyshow.com/events/anuv-jain-kochi/ET00500002");
+  });
+});
