@@ -197,6 +197,7 @@ Sign-in uses only basic scopes (openid, email, profile), so the 7-day "Testing" 
 2. Set **Root Directory** to `apps/web`. Vercel detects Next.js and the pnpm workspace. Leave "Include files outside the root directory" on.
 3. Add the environment variables marked **Vercel** in [the table below](#where-every-secret-goes). Set `NEXTAUTH_URL` and `PUBLIC_BASE_URL` to your production URL.
 4. Deploy. The app's functions run in Singapore (`sin1`, set in `apps/web/vercel.json`), next to the database.
+5. From then on, every push to `main` deploys the dashboard automatically. A pull request gets its own preview deployment.
 
 ## 12. GitHub secrets and jobs
 
