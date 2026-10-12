@@ -116,7 +116,31 @@ async function askHidden(prompt: string): Promise<string> {
 const [cmd = "status", ...names] = process.argv.slice(2);
 const env = readEnv();
 
-if (cmd === "set") {
+/** The system clipboard's text, for `set NAME --clipboard` (no pasting into a terminal). */
+function readClipboard(): string {
+  const r =
+    process.platform === "win32"
+      ? spawnSync("powershell", ["-NoProfile", "-Command", "Get-Clipboard -Raw"], { encoding: "utf8" })
+      : process.platform === "darwin"
+        ? spawnSync("pbpaste", [], { encoding: "utf8" })
+        : spawnSync("xclip", ["-selection", "clipboard", "-o"], { encoding: "utf8" });
+  return (r.stdout ?? "").trim();
+}
+
+if (cmd === "set" && names.includes("--clipboard")) {
+  const name = names.find((n) => n !== "--clipboard");
+  const value = readClipboard();
+  if (!name) {
+    console.log("Usage: pnpm secrets set NAME --clipboard");
+    process.exit(1);
+  }
+  if (value.length < 8 || /\s/.test(value)) {
+    console.log(`The clipboard doesn't look like a key (${value.length} characters${/\s/.test(value) ? ", contains spaces or line breaks" : ""}). Copy just the key and try again.`);
+    process.exit(1);
+  }
+  writeEnv({ [name]: value });
+  console.log(`Saved ${name} from the clipboard (${value.length} characters).`);
+} else if (cmd === "set") {
   if (!names.length) {
     console.log("Usage: pnpm secrets set NAME [NAME...]");
     process.exit(1);
