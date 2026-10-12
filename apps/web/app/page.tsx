@@ -2,7 +2,7 @@ import Link from "next/link";
 import { radarConfig } from "@radar/config";
 import { DealIn } from "@/components/DealIn";
 import { Marquee } from "@/components/Marquee";
-import { Poster } from "@/components/Poster";
+import { StageCarousel } from "@/components/StageCarousel";
 import { Stub } from "@/components/Stub";
 import { requireUser } from "@/lib/auth";
 import { loadHome, type ShowCard } from "@/lib/data";
@@ -11,9 +11,9 @@ import { DEADLINE_LABEL, shortCountdown, stubDate } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 /** What scrolls across the marquee: the next gig, then anything closing soon or undecided. */
-function marqueeItems(nextUp: ShowCard | null, closing: ShowCard[], decide: ShowCard[]): string[] {
+function marqueeItems(going: ShowCard[], closing: ShowCard[], decide: ShowCard[]): string[] {
   const items: string[] = [];
-  if (nextUp) items.push(`Next up: ${nextUp.artistName} · ${nextUp.city} · ${stubDate(nextUp.date, nextUp.endDate)}`);
+  going.slice(0, 5).forEach((s, i) => items.push(`${i === 0 ? "Next up" : "Then"}: ${s.artistName} · ${s.city} · ${stubDate(s.date, s.endDate)}`));
   for (const s of closing.slice(0, 4)) items.push(`${s.artistName} · ${DEADLINE_LABEL[s.deadline!.kind].toLowerCase()} in ${shortCountdown(s.deadline!.at)}`);
   for (const s of decide.slice(0, 3)) if (!closing.includes(s)) items.push(`Still deciding: ${s.artistName} · ${s.city}`);
   return items.map((t) => t.toUpperCase());
@@ -22,14 +22,14 @@ function marqueeItems(nextUp: ShowCard | null, closing: ShowCard[], decide: Show
 export default async function NextUp() {
   await requireUser();
   if (!radarConfig.features.dashboard) return <p className="empty">The dashboard is switched off. Telegram alerts still work.</p>;
-  const { nextUp, closingSoon, decide, recent, total } = await loadHome();
+  const { goingNext, closingSoon, decide, recent, total } = await loadHome();
 
   return (
     <>
-      <Marquee items={marqueeItems(nextUp, closingSoon, decide)} />
+      <Marquee items={marqueeItems(goingNext, closingSoon, decide)} />
 
-      {nextUp ? (
-        <Poster show={nextUp} />
+      {goingNext.length ? (
+        <StageCarousel shows={goingNext} />
       ) : (
         <section className="stage empty-stage">
           <div className="stage-inner">

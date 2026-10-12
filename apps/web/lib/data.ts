@@ -151,13 +151,15 @@ export async function loadHome(now = new Date()) {
   const shows = await loadShows({}, now);
   const visible = shows.filter((s) => s.decision !== "pass" && s.decision !== "not_interested");
   const in72h = now.getTime() + 72 * 3_600_000;
-  const nextUp = shows.find((s) => s.decision === "going" && s.date) ?? null;
+  // Every upcoming show you are going to, soonest first: the stage rotates through them.
+  const goingNext = shows.filter((s) => s.decision === "going" && s.date).slice(0, 10);
+  const nextUp = goingNext[0] ?? null;
   const closingSoon = visible
     .filter((s) => s.deadline && Date.parse(s.deadline.at) <= in72h)
     .sort((a, b) => Date.parse(a.deadline!.at) - Date.parse(b.deadline!.at));
   const decide = sortByDeadline(visible.filter((s) => s.decision === "maybe"));
   const recent = [...visible].filter((s) => s.decision === null).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
-  return { nextUp, closingSoon, decide, recent, total: shows.length };
+  return { nextUp, goingNext, closingSoon, decide, recent, total: shows.length };
 }
 
 export function sortByDeadline(list: ShowCard[]): ShowCard[] {

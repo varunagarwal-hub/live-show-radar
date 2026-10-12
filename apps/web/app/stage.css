@@ -109,10 +109,6 @@
   overflow: hidden;
   vertical-align: top;
   padding-bottom: 0.04em;
-  margin-right: 0.22em;
-}
-.pa-clip:last-child {
-  margin-right: 0;
 }
 .pa-word {
   display: inline-block;
@@ -717,5 +713,112 @@
   }
   .act:hover {
     transform: none;
+  }
+}
+
+/* ---------- the rotating stage: every show you're going to ---------- */
+
+.stage-carousel {
+  position: relative;
+}
+.same-day {
+  background: var(--pink);
+  color: #1b2745;
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  padding: 1px 8px;
+}
+.stage-controls {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--stage-ink);
+}
+.sc-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--stage-ink) 70%, transparent);
+  background: color-mix(in srgb, var(--stage) 75%, transparent);
+  color: var(--stage-ink);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.sc-btn:hover {
+  background: var(--bulb);
+  color: #1b2745;
+  border-color: var(--bulb);
+}
+.sc-btn:focus-visible {
+  outline: 3px solid var(--bulb);
+  outline-offset: 2px;
+}
+.sc-pause {
+  font-size: 0.8rem;
+  letter-spacing: -1px;
+}
+.sc-count {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  min-width: 3.2em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.sc-dots {
+  display: none;
+  gap: 5px;
+  margin-left: 6px;
+}
+.sc-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--stage-ink) 35%, transparent);
+}
+.sc-dots i.on {
+  background: var(--bulb);
+  box-shadow: 0 0 8px var(--bulb);
+}
+@media (min-width: 760px) {
+  .sc-dots {
+    display: inline-flex;
+  }
+  .stage-controls {
+    right: 22px;
+    bottom: 18px;
+  }
+}
+.sc-progress {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: color-mix(in srgb, var(--stage-ink) 15%, transparent);
+}
+.sc-progress span {
+  display: block;
+  height: 100%;
+  background: var(--bulb);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+@media (min-width: 760px) {
+  .sc-progress {
+    left: 0;
+    right: 0;
   }
 }

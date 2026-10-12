@@ -38,7 +38,7 @@ function Crowd() {
  * the name rises word by word, the countdown flips into place like a departures board, and a
  * halftone crowd fills the front. Everything is static with reduced motion.
  */
-export function Poster({ show }: { show: ShowCard }) {
+export function Poster({ show, kicker = "Your next show", sameDay = false }: { show: ShowCard; kicker?: string; sameDay?: boolean }) {
   const stage = useRef<HTMLElement>(null);
   const days = show.date ? daysToGo(show.date) : null;
   const countdown = days === null ? "DATE TBA" : days <= 0 ? "TONIGHT" : days === 1 ? "TOMORROW" : `${days} DAYS TO GO`;
@@ -69,13 +69,17 @@ export function Poster({ show }: { show: ShowCard }) {
       <div className="stage-inner">
         <div className="stage-kicker">
           <span className={`city-code ${show.isHome ? "home" : "away"}`}>{cityCode(show.city)}</span>
-          <span>Your next show</span>
+          <span>{kicker}</span>
+          {sameDay && <span className="same-day">Same day</span>}
           {show.unconfirmed && <span className="highlight">Unconfirmed</span>}
         </div>
         <h1 id="next-up-title" className="poster-artist">
           {show.artistName.split(" ").map((w, i) => (
-            <span key={i} className="pa-clip">
-              <span className="pa-word">{w}</span>
+            <span key={i}>
+              {i > 0 && " "}
+              <span className="pa-clip">
+                <span className="pa-word">{w}</span>
+              </span>
             </span>
           ))}
         </h1>
