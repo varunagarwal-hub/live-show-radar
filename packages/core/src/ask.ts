@@ -202,7 +202,7 @@ export async function answerQuestion(h: DbHandle, llm: Llm, question: string, no
       {
         task: "ask-reply",
         system:
-          'You are a friend who keeps track of gigs. Answer the question in a short, plain reply (sentence case, no marketing tone). Use ONLY the shows listed; list each one with its date, venue, price tier, early-bird or sale deadline, and link. No markdown, no HTML. Return JSON {"reply": string}.',
+          'You are a friend who keeps track of gigs. Answer the question in a short, plain reply (sentence case, no marketing tone). Use ONLY the shows listed; list each one on its own line with its date, venue, price tier, early-bird or sale deadline, and link. If a show has no deadline or no link, simply leave that out: never write "none", "no link" or "not listed". No markdown, no HTML. Return JSON {"reply": string}.',
         user: `Question: ${question.slice(0, 500)}\n\nShows (from the database):\n${lines.map((l, i) => `${i + 1}. ${l}`).join("\n")}`,
         temperature: 0.2,
       },
