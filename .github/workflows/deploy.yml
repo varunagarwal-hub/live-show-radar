@@ -1,0 +1,50 @@
+name: deploy
+# Safety net for the dashboard: Vercel normally deploys every push to main by itself, but its
+# GitHub link has at times started builds half an hour late. This waits up to 3 minutes for
+# Vercel's own deployment of the pushed commit; if none appears, it triggers one through the
+# project's deploy hook (VERCEL_DEPLOY_HOOK secret; README → "Deploys"). When Vercel is on time
+# it does nothing, so there are never two deployments of the same commit.
+on:
+  push:
+    branches: [main]
+    paths-ignore: [".github/keepalive"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+permissions:
+  deployments: read
+
+jobs:
+  ensure-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Wait for Vercel, deploy through the hook if it's late
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run: deploying now."
+          else
+            for i in $(seq 1 18); do
+              n=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${SHA}" -q '[.[] | select(.creator.login == "vercel[bot]")] | length')
+              if [ "${n:-0}" -gt 0 ]; then
+                echo "Vercel started deploying ${SHA::7} on its own after ~$((i * 10))s. Nothing to do."
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "Vercel hasn't started deploying ${SHA::7} after 3 minutes."
+          fi
+          if [ -z "$HOOK" ]; then
+            echo "::warning::VERCEL_DEPLOY_HOOK is not set, so this push may deploy late. See README → Deploys."
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/hook.json -w '%{http_code}' -X POST "$HOOK")
+          echo "Deploy hook answered HTTP $code"
+          [ "$code" -lt 300 ] || { cat /tmp/hook.json; exit 1; }

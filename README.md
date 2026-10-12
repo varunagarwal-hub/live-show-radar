@@ -198,6 +198,7 @@ Sign-in uses only basic scopes (openid, email, profile), so the 7-day "Testing" 
 3. Add the environment variables marked **Vercel** in [the table below](#where-every-secret-goes). Set `NEXTAUTH_URL` and `PUBLIC_BASE_URL` to your production URL.
 4. Deploy. The app's functions run in Singapore (`sin1`, set in `apps/web/vercel.json`), next to the database.
 5. From then on, every push to `main` deploys the dashboard automatically. A pull request gets its own preview deployment.
+6. **Deploys safety net.** Vercel's link to GitHub has at times started builds half an hour late. `.github/workflows/deploy.yml` waits 3 minutes after each push to `main`; if Vercel hasn't started, it triggers the deployment itself. To enable it, create a deploy hook in Vercel (Project → Settings → Git → **Deploy Hooks**, name `github-safety-net`, branch `main`), save the URL with `pnpm secrets set VERCEL_DEPLOY_HOOK --clipboard`, then run `pnpm secrets push`.
 
 ## 12. GitHub secrets and jobs
 

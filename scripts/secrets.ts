@@ -31,6 +31,8 @@ const GITHUB_SECRETS = [
   "INSTAGRAM_ACCESS_TOKEN",
   "SETLISTFM_API_KEY",
   "MUSICBRAINZ_CONTACT",
+  // Deploy safety net (.github/workflows/deploy.yml).
+  "VERCEL_DEPLOY_HOOK",
 ];
 /** What the Vercel side (dashboard, webhook, calendar feed, email ingest) reads. */
 const VERCEL_VARS = [
