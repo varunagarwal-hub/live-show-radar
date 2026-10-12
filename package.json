@@ -23,7 +23,8 @@
     "screenshots": "tsx scripts/screenshot.ts",
     "secrets": "tsx scripts/secrets.ts",
     "check": "tsx scripts/check-accounts.ts",
-    "instagram:setup": "tsx scripts/instagram-setup.ts"
+    "instagram:setup": "tsx scripts/instagram-setup.ts",
+    "components-map": "tsx scripts/components-map.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

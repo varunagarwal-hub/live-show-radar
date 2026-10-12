@@ -11,7 +11,7 @@ It never buys tickets, never enters payment details, and never gets around a sit
 
 Everything runs on free tiers: GitHub Actions (public repo), Vercel Hobby, Neon Free, Gemini and Groq free tiers, and the Telegram Bot API.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit, and [docs/DESIGN.md](docs/DESIGN.md) for the dashboard's design.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit ([components map](docs/components-map.png)), and [docs/DESIGN.md](docs/DESIGN.md) for the dashboard's design.
 
 ---
 
