@@ -7,7 +7,14 @@ import { optionalEnv, radarConfig, requireEnv, watchedAccounts as accountSeeds }
 import { assignTiers, encodeCallback, esc, musicBrainzId, proposeHandle, sendOnce, spotifyFromStore, SpotifyReauthError, type ListeningData } from "@radar/core";
 import { artists, watchedAccounts } from "@radar/core/db/schema";
 import { loadSnapshot } from "@radar/core/db/queries";
-import { maintainInstagramToken } from "./lib/instagram-auth";
+import { currentInstagramToken, maintainInstagramToken } from "./lib/instagram-auth";
+
+/** Whether Business Discovery can read an account (exists, and is a business or creator account). */
+async function handleReadable(igUserId: string, token: string, handle: string): Promise<boolean> {
+  const fields = encodeURIComponent(`business_discovery.username(${handle}){username}`);
+  const res = await fetch(`https://graph.facebook.com/${optionalEnv("GRAPH_API_VERSION") ?? "v25.0"}/${igUserId}?fields=${fields}&access_token=${encodeURIComponent(token)}`).catch(() => null);
+  return Boolean(res?.ok);
+}
 import { createRuntime, log, runJob } from "./lib/runtime";
 
 const rt = createRuntime("watchlist");
@@ -96,11 +103,16 @@ process.exitCode = await runJob("watchlist", rt, async (rt) => {
   }
 
   // 5. Instagram handle proposals for new artists: unconfirmed until Karan confirms.
-  const needHandles = await h.db.select().from(artists).where(and(isNull(artists.handleProposedAt), isNull(artists.instagramHandle), eq(artists.muted, false))).limit(15);
+  const needHandles = await h.db.select().from(artists).where(and(isNull(artists.handleProposedAt), isNull(artists.instagramHandle), eq(artists.muted, false))).limit(40);
   const proposed: { id: number; name: string; handle: string }[] = [];
+  const igUser = optionalEnv("INSTAGRAM_USER_ID");
+  const igToken = igUser && optionalEnv("FACEBOOK_APP_SECRET") ? await currentInstagramToken(rt.state, rt.getDb).catch(() => null) : null;
   for (const a of needHandles) {
     try {
       const p = await proposeHandle(rt.llm(), { name: a.name });
+      // Only suggest handles Business Discovery can actually read; anything else is a guess
+      // the radar couldn't poll anyway.
+      if (p.instagram_handle && igUser && igToken && !(await handleReadable(igUser, igToken, p.instagram_handle))) p.instagram_handle = null;
       await h.db
         .update(artists)
         .set({
@@ -116,7 +128,7 @@ process.exitCode = await runJob("watchlist", rt, async (rt) => {
       break; // LLM down: try again tomorrow
     }
   }
-  for (const p of proposed.slice(0, 8)) {
+  for (const p of proposed) {
     await sendOnce(h, rt.tg, {
       dedupKey: `handle:${p.id}:${p.handle}`,
       kind: "handle_proposal",
