@@ -9,9 +9,9 @@ const CitySchema = z.object({
   name: z.string(),
   /** Lower-case strings that identify this city in captions, listings and news. */
   aliases: z.array(z.string()),
-  /** Slugs each ticketing site uses for this city. */
+  /** Slugs each ticketing site uses for this city (District splits Delhi NCR into three pages). */
   slugs: z.object({
-    district: z.string().optional(),
+    district: z.union([z.string(), z.array(z.string())]).optional(),
     bookmyshow: z.string().optional(),
     skillbox: z.string().optional(),
   }),
@@ -87,7 +87,7 @@ const raw: RadarConfig = {
   cities: [
     { name: "Bengaluru", aliases: ["bengaluru", "bangalore", "blr", "b'lore", "bengaluru urban"], slugs: { district: "bengaluru", bookmyshow: "bengaluru", skillbox: "bangalore" }, airport: "BLR" },
     { name: "Mumbai", aliases: ["mumbai", "bombay"], slugs: { district: "mumbai", bookmyshow: "mumbai", skillbox: "mumbai" }, airport: "BOM" },
-    { name: "Delhi NCR", aliases: ["delhi", "new delhi", "delhi ncr", "ncr", "gurgaon", "gurugram", "noida"], slugs: { district: "new-delhi", bookmyshow: "national-capital-region-ncr", skillbox: "new-delhi" }, airport: "DEL" },
+    { name: "Delhi NCR", aliases: ["delhi", "new delhi", "delhi ncr", "ncr", "gurgaon", "gurugram", "noida"], slugs: { district: ["new-delhi", "gurgaon", "noida"], bookmyshow: "national-capital-region-ncr", skillbox: "new-delhi" }, airport: "DEL" },
     { name: "Pune", aliases: ["pune", "poona"], slugs: { district: "pune", bookmyshow: "pune", skillbox: "pune" }, airport: "PNQ" },
     { name: "Chennai", aliases: ["chennai", "madras"], slugs: { district: "chennai", bookmyshow: "chennai", skillbox: "chennai" }, airport: "MAA" },
     { name: "Hyderabad", aliases: ["hyderabad", "secunderabad"], slugs: { district: "hyderabad", bookmyshow: "hyderabad", skillbox: "hyderabad" }, airport: "HYD" },

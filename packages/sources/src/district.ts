@@ -31,14 +31,15 @@ export class DistrictSource extends ListingSource {
     const errors: unknown[] = [];
 
     for (const city of radarConfig.cities) {
-      const slug = city.slugs.district;
-      if (!slug) continue;
-      try {
-        const html = await this.fetchPage(districtListingUrl(slug));
-        items.push(...ldEventsToItems(html, "district", "District", ctx.watchlist, { city: city.name, via: "listing" }, ctx.now));
-      } catch (err) {
-        errors.push(err);
-        ctx.log(`district ${city.name}: ${(err as Error).message}`);
+      const slugs = [city.slugs.district ?? []].flat();
+      for (const slug of slugs) {
+        try {
+          const html = await this.fetchPage(districtListingUrl(slug));
+          items.push(...ldEventsToItems(html, "district", "District", ctx.watchlist, { city: city.name, via: "listing" }, ctx.now));
+        } catch (err) {
+          errors.push(err);
+          ctx.log(`district ${slug}: ${(err as Error).message}`);
+        }
       }
     }
 
