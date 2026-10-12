@@ -180,7 +180,9 @@ export interface AlertEvent {
 }
 
 /** A web search for the booking page: the fallback when no source gave a ticket link. */
-const TICKET_SITES = ["district.in", "in.bookmyshow.com", "skillboxes.com", "insider.in", "thumpn.com"];
+// Event-page paths only: a bare domain lets the search land on a site's home or city page
+// (e.g. BookMyShow's /explore), which isn't a booking link.
+const TICKET_SITES = ["in.bookmyshow.com/events", "district.in/events", "skillboxes.com/events", "insider.in", "thumpn.com/event"];
 
 /**
  * "Best match" booking link: a feeling-lucky search (DuckDuckGo !ducky) limited to Indian
@@ -190,7 +192,8 @@ const TICKET_SITES = ["district.in", "in.bookmyshow.com", "skillboxes.com", "ins
 export function ticketSearchUrl(artistName: string, city: string, date: string | null): string {
   const when = date ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`)) : "";
   const sites = TICKET_SITES.map((s) => `site:${s}`).join(" OR ");
-  const q = `!ducky ${artistName} ${city} ${when} tickets ${sites}`.replace(/\s+/g, " ").trim();
+  // The quoted name keeps results to that artist; the date steers towards the exact show.
+  const q = `!ducky "${artistName.replace(/"/g, "")}" ${city === "TBA" ? "" : city} ${when} tickets ${sites}`.replace(/\s+/g, " ").trim();
   return `https://duckduckgo.com/?q=${encodeURIComponent(q)}`;
 }
 

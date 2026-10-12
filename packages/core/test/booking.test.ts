@@ -28,7 +28,11 @@ describe("booking links", () => {
     const url = ticketSearchUrl("Anuv Jain", "Chennai", "2026-10-31");
     expect(url.startsWith("https://duckduckgo.com/?q=")).toBe(true);
     const q = decodeURIComponent(url.split("q=")[1]!);
-    expect(q).toBe("!ducky Anuv Jain Chennai 31 October tickets site:district.in OR site:in.bookmyshow.com OR site:skillboxes.com OR site:insider.in OR site:thumpn.com");
-    expect(decodeURIComponent(ticketSearchUrl("Lifafa", "Pune", null).split("q=")[1]!)).toMatch(/^!ducky Lifafa Pune tickets site:/);
+    expect(q).toBe(
+      '!ducky "Anuv Jain" Chennai 31 October tickets site:in.bookmyshow.com/events OR site:district.in/events OR site:skillboxes.com/events OR site:insider.in OR site:thumpn.com/event',
+    );
+    expect(decodeURIComponent(ticketSearchUrl("Lifafa", "Pune", null).split("q=")[1]!)).toMatch(/^!ducky "Lifafa" Pune tickets site:/);
+    // Unknown city: search by artist only, never the literal "TBA".
+    expect(decodeURIComponent(ticketSearchUrl("Sonu Nigam", "TBA", null).split("q=")[1]!)).toMatch(/^!ducky "Sonu Nigam" tickets site:/);
   });
 });
