@@ -31,6 +31,32 @@ const GITHUB_SECRETS = [
   "SETLISTFM_API_KEY",
   "MUSICBRAINZ_CONTACT",
 ];
+/** What the Vercel side (dashboard, webhook, calendar feed, email ingest) reads. */
+const VERCEL_VARS = [
+  "DATABASE_URL",
+  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
+  "TELEGRAM_BOT_TOKEN",
+  "TELEGRAM_ALERT_CHAT_ID",
+  "TELEGRAM_TEST_CHAT_ID",
+  "TELEGRAM_ALLOWED_CHAT_IDS",
+  "TELEGRAM_WEBHOOK_SECRET",
+  "SPOTIFY_CLIENT_ID",
+  "SPOTIFY_CLIENT_SECRET",
+  "SPOTIFY_REFRESH_TOKEN",
+  "SETLISTFM_API_KEY",
+  "MUSICBRAINZ_CONTACT",
+  "GOOGLE_CALENDAR_ICS_URL",
+  "CALENDAR_FEED_TOKEN",
+  "INGEST_EMAIL_SECRET",
+  "ALLOWED_EMAIL",
+  "NEXTAUTH_SECRET",
+  "NEXTAUTH_URL",
+  "PUBLIC_BASE_URL",
+  "AUTH_GOOGLE_ID",
+  "AUTH_GOOGLE_SECRET",
+  "RADAR_DRY_RUN",
+];
 const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32 } as const;
 
 function readEnv(): Map<string, string> {
@@ -157,6 +183,31 @@ if (cmd === "set" && names.includes("--clipboard")) {
   for (const [k, bytes] of Object.entries(RANDOM)) if (!env.get(k)) updates[k] = randomBytes(bytes).toString("base64url");
   writeEnv(updates);
   console.log(Object.keys(updates).length ? `Generated: ${Object.keys(updates).join(", ")}` : "All random secrets already exist.");
+} else if (cmd === "push-vercel") {
+  // Uses the Vercel CLI's own login and the project linked in .vercel/project.json.
+  const authFile = [join(process.env.APPDATA ?? "", "com.vercel.cli/Data/auth.json"), join(process.env.HOME ?? "", ".local/share/com.vercel.cli/auth.json"), join(process.env.HOME ?? "", "Library/Application Support/com.vercel.cli/auth.json")].find(existsSync);
+  const linkFile = join(import.meta.dirname, "../.vercel/project.json");
+  if (!authFile || !existsSync(linkFile)) {
+    console.log("Run `npx vercel login` and `npx vercel link` first.");
+    process.exit(1);
+  }
+  const token = (JSON.parse(readFileSync(authFile, "utf8")) as { token: string }).token;
+  const { projectId, orgId } = JSON.parse(readFileSync(linkFile, "utf8")) as { projectId: string; orgId: string };
+  const present = VERCEL_VARS.filter((k) => env.get(k));
+  const body = present.map((key) => ({ key, value: env.get(key)!, type: "encrypted", target: ["production", "preview"] }));
+  const res = await fetch(`https://api.vercel.com/v10/projects/${projectId}/env?upsert=true&teamId=${orgId}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    console.log(`✗ Vercel said HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    process.exit(1);
+  }
+  console.log(`✓ Saved ${present.length} variables to Vercel: ${present.join(", ")}`);
+  const missing = VERCEL_VARS.filter((k) => !env.get(k));
+  if (missing.length) console.log(`  Not set in .env yet (skipped): ${missing.join(", ")}`);
+  console.log("  Redeploy for them to take effect (pushing to GitHub does that).");
 } else if (cmd === "push") {
   const present = GITHUB_SECRETS.filter((k) => env.get(k));
   const missing = GITHUB_SECRETS.filter((k) => !env.get(k));
