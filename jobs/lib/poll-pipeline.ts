@@ -169,7 +169,9 @@ export async function runPoll(d: PollDeps): Promise<PollResult> {
   // 5. Extract everything still unprocessed (this run's items, emails pushed by the Apps Script,
   //    and anything queued after an LLM outage). Only when the database is already awake, or once
   //    an hour via the heartbeat flush, so quiet runs stay database-free.
-  if (h || d.state.lastFlushAt === null || d.now.getTime() - Date.parse(d.state.lastFlushAt) > 55 * 60_000) {
+  // ...and on every run while a backlog is known to be waiting, so it drains steadily.
+  const backlogWaiting = Number(d.state.cursors.backlog ?? "0") > 0;
+  if (h || backlogWaiting || d.state.lastFlushAt === null || d.now.getTime() - Date.parse(d.state.lastFlushAt) > 55 * 60_000) {
     const hh = await db();
     // Everything except the poster bytes: a batch of images can exceed Neon's 64 MB response
     // limit, so each image is loaded on its own just before extraction.
@@ -240,6 +242,9 @@ export async function runPoll(d: PollDeps): Promise<PollResult> {
       }
       wroteDb = true;
     }
+    const [left] = await hh.db.select({ n: sql<number>`count(*)::int` }).from(rawItems).where(and(eq(rawItems.processed, false), lt(rawItems.processAttempts, MAX_ATTEMPTS)));
+    d.state.cursors.backlog = String(left?.n ?? 0);
+    stats.backlog = left?.n ?? 0;
   }
 
   // 6. Anything written → refresh the snapshot so the tier watcher sees new events.
