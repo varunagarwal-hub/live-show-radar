@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { ShowCard } from "@/lib/data";
 import { decideAction } from "@/lib/actions";
 import { cityCode, DEADLINE_LABEL, formatPrice, shortWhen, stubDate } from "@/lib/format";
+import { BoardingPassButton, CassetteButton, TicketButton, WristbandButton } from "./ActionButtons";
 import { Countdown } from "./Countdown";
+import { Draggable, gsap } from "./motion";
 
 type Decision = ShowCard["decision"];
 
@@ -16,19 +18,22 @@ function priceLine(s: ShowCard): string | null {
 }
 
 /**
- * The signature element: a ticket stub. The tear-off holds the live countdown. When the deadline
- * passes or every tier sells out, the tear-off is gone (torn). Going stamps it ADMITTED.
+ * The signature element: a ticket stub. The tear-off holds the live countdown. Drag it off (or
+ * tap Going) and the stub is admitted: the tear-off flies away and the ADMITTED stamp lands.
+ * When the deadline passes or every tier sells out, the tear-off is already gone (torn).
  */
 export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: boolean; emphasis?: "closing" | "decide" }) {
   const [decision, setDecision] = useState<Decision>(show.decision);
   const [justAdmitted, setJustAdmitted] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const tearRef = useRef<HTMLDivElement>(null);
 
   const deadlinePassed = show.deadline ? Date.parse(show.deadline.at) <= Date.now() : false;
   const torn = show.soldOut || deadlinePassed || (show.earlyBirdStatus === "sold_out" && !show.deadline && !show.tiers.some((t) => t.status === "open"));
   const urgent = show.urgency === "urgent";
   const price = priceLine(show);
+  const canTear = !mini && !torn && decision !== "going";
 
   const decide = (next: NonNullable<Decision>) => {
     const prev = decision;
@@ -44,6 +49,47 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
       }
     });
   };
+  const decideRef = useRef(decide);
+  decideRef.current = decide;
+
+  // Tear to go: drag the tear-off past the halfway mark and it rips away.
+  useEffect(() => {
+    const el = tearRef.current;
+    if (!el || !canTear) return;
+    const card = el.closest("article");
+    const [drag] = Draggable.create(el, {
+      type: "x",
+      bounds: { minX: 0, maxX: 200 },
+      onPress() {
+        card?.classList.add("tearing");
+      },
+      onDrag() {
+        gsap.set(el, { rotation: this.x / 18 });
+      },
+      onDragEnd() {
+        if (this.x > 64) {
+          gsap.to(el, {
+            x: 300,
+            y: 90,
+            rotation: 28,
+            opacity: 0,
+            duration: 0.42,
+            ease: "power2.in",
+            onComplete: () => {
+              gsap.set(el, { clearProps: "transform,opacity" });
+              card?.classList.remove("tearing");
+              decideRef.current("going");
+            },
+          });
+        } else {
+          gsap.to(el, { x: 0, rotation: 0, duration: 0.4, ease: "back.out(2.6)", onComplete: () => card?.classList.remove("tearing") });
+        }
+      },
+    });
+    return () => {
+      drag?.kill();
+    };
+  }, [canTear]);
 
   const classes = ["stub", mini && "mini", torn && "torn", !torn && emphasis, justAdmitted && "thud"].filter(Boolean).join(" ");
   const label = `${show.artistName}, ${stubDate(show.date, show.endDate)}, ${show.city}`;
@@ -71,43 +117,29 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
           </ul>
         )}
         {!mini && (
-          <div className="stub-actions">
-            <button className="btn" aria-pressed={decision === "going"} disabled={pending} onClick={() => decide("going")}>
-              Going
-            </button>
-            <button className="btn" aria-pressed={decision === "maybe"} disabled={pending} onClick={() => decide("maybe")}>
-              Maybe
-            </button>
-            <button className="btn" aria-pressed={decision === "pass"} disabled={pending} onClick={() => decide("pass")}>
-              Pass
-            </button>
-            {show.ticketUrl ? (
-              <a className="btn link" href={show.ticketUrl} target="_blank" rel="noopener noreferrer">
-                Open tickets
-              </a>
-            ) : (
-              <>
-                {show.bioUrl && (
-                  <a className="btn link" href={show.bioUrl} target="_blank" rel="noopener noreferrer" title="The artist's link page usually has a booking link per city">
-                    Artist's links
-                  </a>
-                )}
-                <a className="btn link" href={show.searchUrl} target="_blank" rel="noopener noreferrer">
-                  Find tickets
-                </a>
-              </>
-            )}
-            {show.flightsUrl && (
-              <a className="btn link" href={show.flightsUrl} target="_blank" rel="noopener noreferrer">
-                Search flights
-              </a>
-            )}
-            {decision === "going" && show.playlistUrl && (
-              <a className="btn link" href={show.playlistUrl} target="_blank" rel="noopener noreferrer">
-                Playlist
-              </a>
-            )}
-          </div>
+          <>
+            <div className="stub-actions" role="group" aria-label="Your decision">
+              <button className="btn" aria-pressed={decision === "going"} disabled={pending} onClick={() => decide("going")}>
+                Going
+              </button>
+              <button className="btn" aria-pressed={decision === "maybe"} disabled={pending} onClick={() => decide("maybe")}>
+                Maybe
+              </button>
+              <button className="btn" aria-pressed={decision === "pass"} disabled={pending} onClick={() => decide("pass")}>
+                Pass
+              </button>
+            </div>
+            <div className="gig-actions">
+              {show.ticketUrl ? (
+                <TicketButton href={show.ticketUrl} label="Tickets" sub="Open booking" />
+              ) : (
+                <TicketButton href={show.searchUrl} label="Tickets" sub="Best match" />
+              )}
+              {show.bioUrl && !show.ticketUrl && <WristbandButton href={show.bioUrl} label="Artist's links" />}
+              {decision === "going" && show.playlistUrl && <CassetteButton href={show.playlistUrl} />}
+              {show.flightsUrl && show.flightRoute && <BoardingPassButton href={show.flightsUrl} from={show.flightRoute.from} to={show.flightRoute.to} />}
+            </div>
+          </>
         )}
         {error && (
           <p role="alert" className="stub-venue">
@@ -124,7 +156,7 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
         // Admitted: the stamp owns the tear-off; the deadline no longer matters.
         <div className="stub-tear" aria-hidden="true" />
       ) : (
-        <div className="stub-tear">
+        <div className={`stub-tear${canTear ? " can-tear" : ""}`} ref={tearRef}>
           {show.deadline ? (
             <>
               <span className="tear-label">{DEADLINE_LABEL[show.deadline.kind]} in</span>
@@ -141,6 +173,11 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
               <span className="tear-label">Tickets</span>
               <span className="tear-count">Soon</span>
             </>
+          )}
+          {canTear && (
+            <span className="tear-hint" aria-hidden="true">
+              Tear to go →
+            </span>
           )}
         </div>
       )}

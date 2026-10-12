@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BottomNav, DesktopNav, ThemeToggle } from "@/components/Chrome";
 import { mastheadDate } from "@/lib/format";
 import "./globals.css";
+import "./stage.css";
 
 // Big Shoulders (formerly "Big Shoulders Display"; Google merged the families behind an optical-size axis).
 const display = Big_Shoulders({ subsets: ["latin"], weight: "variable", axes: ["opsz"], variable: "--font-display", display: "swap" });

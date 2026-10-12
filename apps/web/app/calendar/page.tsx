@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DealIn } from "@/components/DealIn";
 import { requireUser } from "@/lib/auth";
 import { loadMonth, type ShowCard } from "@/lib/data";
 import { cityCode } from "@/lib/format";
@@ -10,8 +11,7 @@ const dow = new Intl.DateTimeFormat("en-IN", { weekday: "short", timeZone: "UTC"
 
 function shift(month: string, by: number): string {
   const [y, m] = month.split("-").map(Number) as [number, number];
-  const d = new Date(Date.UTC(y, m - 1 + by, 1));
-  return d.toISOString().slice(0, 7);
+  return new Date(Date.UTC(y, m - 1 + by, 1)).toISOString().slice(0, 7);
 }
 
 function Act({ s }: { s: ShowCard }) {
@@ -21,23 +21,27 @@ function Act({ s }: { s: ShowCard }) {
       <span className={`city-code ${s.isHome ? "home" : "away"}`}>{cityCode(s.city)}</span>
       {s.decision === "going" && <span className="act-tag going">Going</span>}
       {s.decision === "maybe" && <span className="act-tag">Maybe</span>}
-      {s.urgency === "urgent" && s.decision === null && <span className="act-tag">Tier {s.priorityTier}</span>}
     </span>
   );
 }
 
+/**
+ * The month as the back of a tour t-shirt: every show stacked as a date and a city in big
+ * condensed type, your Going shows printed in reverse and your Maybes highlighted. On desktop the
+ * month grid follows underneath, for a quick look at weekends.
+ */
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   await requireUser();
   const { m } = await searchParams;
   const todayIst = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
   const month = m && /^\d{4}-\d{2}$/.test(m) ? m : todayIst.slice(0, 7);
-  const shows = await loadMonth(month);
+  const shows = (await loadMonth(month)).filter((s) => s.date);
   const byDay = new Map<string, ShowCard[]>();
-  for (const s of shows) if (s.date) byDay.set(s.date, [...(byDay.get(s.date) ?? []), s]);
+  for (const s of shows) byDay.set(s.date!, [...(byDay.get(s.date!) ?? []), s]);
 
   const first = new Date(`${month}-01T00:00:00Z`);
   const daysInMonth = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
-  const lead = (first.getUTCDay() + 6) % 7; // Monday first
+  const lead = (first.getUTCDay() + 6) % 7;
   const cells = Array.from({ length: Math.ceil((lead + daysInMonth) / 7) * 7 }, (_, i) => {
     const day = i - lead + 1;
     return day >= 1 && day <= daysInMonth ? `${month}-${String(day).padStart(2, "0")}` : null;
@@ -45,44 +49,61 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <div className="flyer-head">
-        <h1 className="flyer-month">
-          {monthName.format(first)} <span>{first.getUTCFullYear()}</span>
+      <header className="tour-head">
+        <p className="tour-kicker">World tour? No: your tour.</p>
+        <h1 className="tour-title">
+          <span>Tour dates</span>
+          <span className="tour-month">
+            {monthName.format(first)} {first.getUTCFullYear()}
+          </span>
         </h1>
-        <div className="flyer-nav">
-          <Link className="btn" href={`/calendar?m=${shift(month, -1)}`} aria-label="Previous month">
-            Prev
+        <nav className="flyer-nav" aria-label="Month">
+          <Link className="btn" href={`/calendar?m=${shift(month, -1)}`}>
+            ← {monthName.format(new Date(`${shift(month, -1)}-01T00:00:00Z`))}
           </Link>
-          <Link className="btn" href={`/calendar?m=${shift(month, 1)}`} aria-label="Next month">
-            Next
+          <Link className="btn" href={`/calendar?m=${shift(month, 1)}`}>
+            {monthName.format(new Date(`${shift(month, 1)}-01T00:00:00Z`))} →
           </Link>
-        </div>
-      </div>
-      <p className="lede">
-        <span className="city-code home">BLR</span> blue ink is Bengaluru · <span className="city-code away">AWAY</span> dotted ink is elsewhere
-      </p>
+        </nav>
+        <p className="lede">
+          <span className="city-code home">BLR</span> blue ink is Bengaluru · <span className="city-code away">AWAY</span> dotted ink is elsewhere
+        </p>
+      </header>
 
-      {byDay.size === 0 && <p className="empty">No shows this month yet. The radar checks every 30 minutes.</p>}
-
-      <ol className="listing calendar-list" aria-label="Shows this month">
-        {[...byDay.entries()].map(([date, list]) => {
-          const d = new Date(`${date}T00:00:00Z`);
-          return (
-            <li key={date}>
-              <div className="day">
-                {dow.format(d)}
-                <b>{d.getUTCDate()}</b>
+      {shows.length === 0 ? (
+        <p className="empty">No shows this month yet. The radar checks every 30 minutes.</p>
+      ) : (
+        <DealIn className="tour-list">
+          {shows.map((s) => {
+            const d = new Date(`${s.date}T00:00:00Z`);
+            return (
+              <div key={s.id} className={`tour-row${s.decision === "going" ? " going" : ""}${s.decision === "maybe" ? " maybe" : ""}`}>
+                <div className="tour-date">
+                  <span>{dow.format(d)}</span>
+                  <b>
+                    {String(d.getUTCDate()).padStart(2, "0")}.{String(d.getUTCMonth() + 1).padStart(2, "0")}
+                  </b>
+                </div>
+                <div className="tour-where">
+                  <span className="tour-city">{s.city}</span>
+                  <span className="tour-who">
+                    {s.artistName}
+                    {s.venue ? ` · ${s.venue}` : ""}
+                  </span>
+                </div>
+                <div className="tour-mark">
+                  <span className={`city-code ${s.isHome ? "home" : "away"}`}>{cityCode(s.city)}</span>
+                  {s.decision === "going" && <span className="tour-admit">Admitted</span>}
+                  {s.decision === "maybe" && <span className="highlight">Maybe</span>}
+                  {s.unconfirmed && <span className="tour-unconf">Unconfirmed</span>}
+                </div>
               </div>
-              <div className="acts">
-                {list.map((s) => (
-                  <Act key={s.id} s={s} />
-                ))}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+            );
+          })}
+        </DealIn>
+      )}
 
+      <h2 className="section-title month-grid-title">The month at a glance</h2>
       <div className="month-grid" role="grid" aria-label="Month">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="dow" role="columnheader">

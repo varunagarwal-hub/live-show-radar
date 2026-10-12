@@ -1,0 +1,721 @@
+/* Early Access: the concert layer. Stage hero, marquee, split-flap, gig-object buttons,
+   tear-to-go, tour-dates calendar, equalizer and neon. Motion is driven by GSAP and switched
+   off entirely under prefers-reduced-motion. */
+
+:root {
+  /* printed objects (cassette, boarding pass) keep their paper colour in both themes */
+  --object: #e4e6e1;
+  --stage: #141c33;
+  --stage-ink: #e9ebe6;
+  --bulb: #ffe800;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --stage: #0b1020;
+  }
+}
+:root[data-theme="dark"] {
+  --stage: #0b1020;
+}
+
+/* ---------- venue marquee ---------- */
+
+.marquee {
+  position: relative;
+  margin: 14px calc(var(--gutter) * -1) 0;
+  background: var(--stage);
+  color: var(--bulb);
+  overflow: hidden;
+  padding: 13px 0;
+  /* bulb rows top and bottom, chasing */
+  background-image:
+    radial-gradient(circle 2.6px, var(--bulb) 92%, transparent),
+    radial-gradient(circle 2.6px, var(--bulb) 92%, transparent);
+  background-size: 16px 8px, 16px 8px;
+  background-repeat: repeat-x;
+  background-position: 0 1px, 8px calc(100% - 1px);
+  animation: bulbs 0.9s steps(2) infinite;
+}
+@keyframes bulbs {
+  50% {
+    background-position: 8px 1px, 0 calc(100% - 1px);
+  }
+}
+.mq-track {
+  display: flex;
+  width: max-content;
+}
+.mq-run {
+  display: flex;
+  flex-shrink: 0;
+}
+.mq-item {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--bulb) 55%, transparent);
+  padding-left: 18px;
+}
+.mq-star {
+  color: var(--pink);
+  padding-left: 18px;
+}
+@media (min-width: 900px) {
+  .marquee {
+    margin-inline: 0;
+  }
+}
+
+/* ---------- the stage ---------- */
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  margin-top: 0;
+  background: var(--stage);
+  color: var(--stage-ink);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 420px;
+  margin-inline: calc(var(--gutter) * -1);
+}
+.stage::before {
+  /* stage floor */
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 38%;
+  background: linear-gradient(to top, color-mix(in srgb, var(--blue) 22%, transparent), transparent);
+  z-index: -1;
+}
+.stage.away::before {
+  background: linear-gradient(to top, color-mix(in srgb, var(--pink) 16%, transparent), transparent);
+}
+.stage-inner {
+  position: relative;
+  z-index: 2;
+  padding: 26px var(--gutter) 120px;
+}
+.stage .poster-artist {
+  color: var(--stage-ink);
+  text-shadow: 3px 3px 0 var(--pink);
+  margin: 6px 0 8px;
+}
+.pa-clip {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.04em;
+  margin-right: 0.22em;
+}
+.pa-clip:last-child {
+  margin-right: 0;
+}
+.pa-word {
+  display: inline-block;
+}
+.stage .poster-meta {
+  color: var(--stage-ink);
+}
+.stage-kicker {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: 500;
+  flex-wrap: wrap;
+}
+.stage-kicker .city-code {
+  color: var(--stage-ink);
+}
+.stage .city-code.away::before {
+  background-image: radial-gradient(var(--stage-ink) 1.1px, transparent 1.4px);
+  outline-color: var(--stage-ink);
+}
+.stage-note {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin: 10px 0 0;
+}
+.stage-art {
+  display: none;
+}
+@media (min-width: 760px) {
+  .stage {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    margin-inline: 0;
+    min-height: 480px;
+  }
+  .stage-inner {
+    padding: 40px 36px 150px;
+  }
+  .stage-art {
+    display: block;
+    position: relative;
+    z-index: 1;
+    align-self: center;
+    margin-right: 36px;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+  .stage-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+.empty-stage .stage-inner {
+  padding-bottom: 60px;
+}
+
+/* spotlights: two ink cones swinging from the rig */
+.spot {
+  position: absolute;
+  top: -12%;
+  width: 70%;
+  height: 135%;
+  z-index: 0;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  filter: blur(2px);
+}
+.spot-l {
+  left: -18%;
+  rotate: 8deg;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--blue) 85%, transparent), color-mix(in srgb, var(--blue) 12%, transparent) 75%, transparent);
+}
+.spot-r {
+  right: -18%;
+  rotate: -8deg;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--pink) 75%, transparent), color-mix(in srgb, var(--pink) 10%, transparent) 75%, transparent);
+}
+@media (min-width: 760px) {
+  .spot {
+    width: 48%;
+  }
+  .spot-l {
+    left: 2%;
+  }
+  .spot-r {
+    right: 22%;
+  }
+}
+
+/* halftone crowd along the front of the stage */
+.crowd {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 96px;
+  pointer-events: none;
+}
+.crowd circle {
+  fill: color-mix(in srgb, var(--stage-ink) 55%, transparent);
+}
+@media (min-width: 760px) {
+  .crowd {
+    height: 140px;
+  }
+}
+
+/* ---------- split-flap countdown ---------- */
+
+.split-flap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 14px 0 4px;
+  perspective: 400px;
+}
+.flap-word {
+  display: inline-flex;
+  gap: 3px;
+}
+.flap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 0.72em;
+  padding: 0.08em 0.07em 0.02em;
+  background: #070a14;
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 rgb(255 255 255 / 0.06);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(1.35rem, 6.4vw, 2.6rem);
+  line-height: 1;
+  color: var(--bulb);
+  font-variant-numeric: tabular-nums;
+}
+.flap::after {
+  /* the hinge line across the middle of each flap */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1.5px;
+  background: rgb(0 0 0 / 0.65);
+}
+.flap-gap {
+  background: transparent;
+  min-width: 0.3em;
+  box-shadow: none;
+}
+.flap-gap::after {
+  display: none;
+}
+.flap-char {
+  display: inline-block;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+}
+
+/* ---------- gig-object buttons ---------- */
+
+.stage-actions,
+.gig-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+.stage-actions {
+  margin-top: 18px;
+}
+.gig-actions {
+  margin-top: 10px;
+}
+
+.act {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  text-decoration: none;
+  font-weight: 700;
+  line-height: 1.1;
+  transition: transform 140ms ease, filter 140ms ease;
+  will-change: transform;
+}
+.act:hover {
+  transform: translateY(-2px) rotate(-1.2deg);
+}
+.act:active {
+  transform: translateY(1px) scale(0.98);
+}
+.act:focus-visible {
+  outline: 3px solid var(--bulb);
+  outline-offset: 3px;
+}
+
+/* a notched admission ticket */
+.ticket-btn {
+  position: relative;
+  background: var(--bulb);
+  color: #1b2745;
+  padding: 8px 22px 8px 24px;
+  mask:
+    radial-gradient(circle 9px at 0 50%, #0000 96%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 9px at 100% 50%, #0000 96%, #000) right / 51% 100% no-repeat;
+}
+.tb-main {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tb-sub {
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-left: 2px dashed #1b2745;
+  padding-left: 10px;
+  margin-left: 2px;
+}
+
+/* a cassette for the pre-show playlist */
+.cassette-btn {
+  background: var(--object);
+  color: #1b2745;
+  padding: 6px 14px 6px 8px;
+  border: 2px solid #1b2745;
+  border-radius: 6px;
+}
+.cassette {
+  width: 54px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  flex-shrink: 0;
+}
+.cassette .window {
+  fill: var(--pink);
+  fill-opacity: 0.35;
+}
+.reel {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.cassette-btn:hover .reel {
+  animation: reel 1.1s linear infinite;
+}
+@keyframes reel {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.act-text {
+  display: grid;
+  white-space: nowrap;
+}
+.act-kicker {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pink);
+}
+
+/* a boarding pass for out-of-city shows */
+.boarding-btn {
+  display: inline-grid;
+  gap: 2px;
+  background: var(--object);
+  color: #1b2745;
+  padding: 6px 16px 6px 14px;
+  border-left: 8px solid var(--blue);
+  border-radius: 4px 0 0 4px;
+  position: relative;
+}
+.boarding-btn::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 6px;
+  bottom: 6px;
+  border-right: 2px dashed #1b2745;
+}
+.bp-route {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+}
+.bp-plane {
+  display: inline-block;
+  color: var(--blue);
+  transition: transform 300ms ease;
+}
+.boarding-btn:hover .bp-plane {
+  transform: translateX(4px) rotate(-12deg);
+}
+.bp-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* a festival wristband for the artist's link page */
+.wristband-btn {
+  position: relative;
+  background: var(--pink);
+  color: #1b2745;
+  padding: 8px 18px 8px 34px;
+  border-radius: 999px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+.wb-holes {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1b2745;
+  box-shadow: inset 0 0 0 4px var(--pink), inset 0 0 0 6px #1b2745;
+}
+
+/* stubs sit on paper: give the buttons a printed edge there */
+.stub .ticket-btn,
+.stub .wristband-btn {
+  box-shadow: none;
+}
+.stub .cassette-btn,
+.stub .boarding-btn {
+  background: var(--object);
+}
+
+/* ---------- tear to go ---------- */
+
+.stub-tear.can-tear {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  background: var(--paper-2);
+  z-index: 2;
+}
+.stub-tear.can-tear:active {
+  cursor: grabbing;
+}
+.tear-hint {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  white-space: nowrap;
+}
+.stub.tearing {
+  mask: none;
+  z-index: 3;
+}
+.stub.tearing .stub-tear {
+  box-shadow: -4px 0 0 var(--paper);
+}
+
+.stubs-gap {
+  margin-top: 20px;
+}
+
+/* ---------- tour-dates calendar ---------- */
+
+.tour-head {
+  margin-top: 22px;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.tour-kicker {
+  margin: 0;
+  font-weight: 700;
+  color: var(--pink);
+  letter-spacing: 0.02em;
+}
+.tour-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.82;
+  display: grid;
+  font-size: clamp(3.4rem, 17vw, 8rem);
+  font-variation-settings: "opsz" 72;
+}
+.tour-month {
+  font-size: 0.42em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--blue);
+}
+.tour-list {
+  margin: 22px auto 0;
+  max-width: 980px;
+  display: grid;
+  border-top: 4px solid var(--ink);
+}
+.tour-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-areas: "date where" "date mark";
+  gap: 4px 14px;
+  align-items: center;
+  padding: 14px 6px;
+  border-bottom: 1.5px solid var(--rule);
+}
+.tour-date {
+  grid-area: date;
+  font-family: var(--display);
+  text-transform: uppercase;
+  line-height: 1;
+  display: grid;
+  font-weight: 700;
+}
+.tour-date b {
+  font-weight: 900;
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.tour-where {
+  grid-area: where;
+  display: grid;
+  min-width: 0;
+}
+.tour-city {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  line-height: 0.86;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  font-variation-settings: "opsz" 72;
+}
+.tour-who {
+  font-weight: 500;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.tour-mark {
+  grid-area: mark;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.tour-admit {
+  font-family: var(--display);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pink);
+  border: 2.5px solid var(--pink);
+  padding: 1px 8px;
+  rotate: -4deg;
+}
+.tour-unconf {
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-bottom: 2px dotted currentColor;
+}
+.tour-row.going {
+  background: var(--ink);
+  color: var(--paper);
+}
+.tour-row.going .tour-who {
+  color: color-mix(in srgb, var(--paper) 80%, transparent);
+}
+.tour-row.going .city-code {
+  color: var(--paper);
+}
+.tour-row.maybe .tour-city {
+  box-shadow: inset 0 -0.32em 0 var(--yellow);
+  justify-self: start;
+}
+@media (min-width: 900px) {
+  .tour-row {
+    grid-template-columns: 110px minmax(0, 1fr) 220px;
+    grid-template-areas: "date where mark";
+    padding: 18px 12px;
+  }
+  .tour-mark {
+    justify-content: flex-end;
+  }
+}
+.month-grid-title {
+  display: none;
+}
+@media (min-width: 900px) {
+  .month-grid-title {
+    display: flex;
+    margin-top: 48px;
+  }
+}
+
+/* ---------- equalizer on the current tab ---------- */
+
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 18px;
+  width: 16px;
+}
+.eq i {
+  width: 4px;
+  height: 100%;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: eq 0.9s ease-in-out infinite alternate;
+}
+.eq i:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.3s;
+}
+.eq i:nth-child(3) {
+  animation-duration: 1.1s;
+  animation-delay: -0.6s;
+}
+@keyframes eq {
+  0% {
+    transform: scaleY(0.25);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+.masthead nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.masthead nav .eq {
+  height: 14px;
+  width: 13px;
+}
+.masthead nav .eq i {
+  width: 3px;
+  background: var(--pink);
+}
+
+/* ---------- neon wordmark after the show ---------- */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wordmark {
+    color: #fff4fb;
+    text-shadow: 0 0 4px var(--pink), 0 0 14px var(--pink), 0 0 30px color-mix(in srgb, var(--pink) 60%, transparent);
+    animation: neon-on 1.6s steps(1) 1 both;
+  }
+}
+:root[data-theme="dark"] .wordmark {
+  color: #fff4fb;
+  text-shadow: 0 0 4px var(--pink), 0 0 14px var(--pink), 0 0 30px color-mix(in srgb, var(--pink) 60%, transparent);
+  animation: neon-on 1.6s steps(1) 1 both;
+}
+.wordmark small {
+  text-shadow: none;
+  color: var(--ink-soft);
+}
+@keyframes neon-on {
+  0%,
+  12%,
+  20%,
+  34% {
+    opacity: 0.25;
+  }
+  8%,
+  16%,
+  26%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---------- reduced motion: everything just appears ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee,
+  .eq i,
+  .wordmark,
+  .cassette-btn:hover .reel {
+    animation: none !important;
+  }
+  .act,
+  .bp-plane {
+    transition: none;
+  }
+  .act:hover {
+    transform: none;
+  }
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { radarConfig } from "@radar/config";
+import { DealIn } from "@/components/DealIn";
 import { Stub } from "@/components/Stub";
 import { requireUser } from "@/lib/auth";
 import { loadShows } from "@/lib/data";
@@ -78,11 +79,11 @@ export default async function ListPage({ searchParams }: { searchParams: Promise
         </button>
       </form>
 
-      <div className="stubs" style={{ marginTop: 20 }}>
+      <DealIn className="stubs stubs-gap">
         {visible.map((s) => (
           <Stub key={s.id} show={s} />
         ))}
-      </div>
+      </DealIn>
       {!visible.length && <p className="empty">No shows match those filters. Try fewer of them.</p>}
     </section>
   );

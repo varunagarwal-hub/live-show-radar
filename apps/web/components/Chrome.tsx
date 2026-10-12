@@ -15,12 +15,24 @@ const DESKTOP = [...LINKS.slice(0, 4), { href: "/artists", label: "Artists", ico
 
 const isCurrent = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href) || (href === "/more" && (path.startsWith("/artists") || path.startsWith("/health"))));
 
+/** Three bouncing bars: the "now playing" mark on the current tab. */
+function Equalizer() {
+  return (
+    <span className="eq" aria-hidden="true">
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
+
 export function DesktopNav() {
   const path = usePathname();
   return (
     <nav aria-label="Main">
       {DESKTOP.map((l) => (
         <Link key={l.href} href={l.href} aria-current={isCurrent(path, l.href) && l.href !== "/more" ? "page" : undefined}>
+          {isCurrent(path, l.href) && l.href !== "/more" && <Equalizer />}
           {l.label}
         </Link>
       ))}
@@ -34,9 +46,13 @@ export function BottomNav() {
     <nav className="bottom-nav" aria-label="Main">
       {LINKS.map((l) => (
         <Link key={l.href} href={l.href} aria-current={isCurrent(path, l.href) ? "page" : undefined}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d={l.icon} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {isCurrent(path, l.href) ? (
+            <Equalizer />
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d={l.icon} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
           {l.label}
         </Link>
       ))}

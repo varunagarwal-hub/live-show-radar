@@ -13,7 +13,7 @@ describe("booking links", () => {
   it("falls back to the artist's link page plus a search", () => {
     const lines = bookingLines({ ...base, ticketUrl: null, bioUrl: "https://linktr.ee/anuvjainshows" });
     expect(lines[0]).toContain('href="https://linktr.ee/anuvjainshows">Artist&#39;s links</a>'.replace("&#39;", "'"));
-    expect(lines[1]).toContain("Find tickets");
+    expect(lines[1]).toContain("Tickets (best match)");
   });
 
   it("only shows bio links that plausibly lead to tickets", () => {
@@ -24,10 +24,11 @@ describe("booking links", () => {
     expect(bookingLines({ ...base, ticketUrl: null, bioUrl: "https://www.tatwamasifoundation.com" })).toHaveLength(1);
   });
 
-  it("searches with artist, city and the full date", () => {
-    expect(ticketSearchUrl("Anuv Jain", "Chennai", "2026-10-31")).toBe(
-      `https://www.google.com/search?q=${encodeURIComponent("Anuv Jain Chennai 31 October 2026 tickets")}`,
-    );
-    expect(ticketSearchUrl("Lifafa", "Pune", null)).toBe(`https://www.google.com/search?q=${encodeURIComponent("Lifafa Pune tickets")}`);
+  it("jumps to the best ticketing-site match for artist, city and date", () => {
+    const url = ticketSearchUrl("Anuv Jain", "Chennai", "2026-10-31");
+    expect(url.startsWith("https://duckduckgo.com/?q=")).toBe(true);
+    const q = decodeURIComponent(url.split("q=")[1]!);
+    expect(q).toBe("!ducky Anuv Jain Chennai 31 October tickets site:district.in OR site:in.bookmyshow.com OR site:skillboxes.com OR site:insider.in OR site:thumpn.com");
+    expect(decodeURIComponent(ticketSearchUrl("Lifafa", "Pune", null).split("q=")[1]!)).toMatch(/^!ducky Lifafa Pune tickets site:/);
   });
 });

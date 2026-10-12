@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
-import { isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
+import { cityConfig, isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
 import { artists, decisions, events, eventSources, jobRuns, playlists, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
 import type { TierJson } from "@radar/core/db/schema";
 import { getDb } from "./db";
@@ -38,6 +38,8 @@ export interface ShowCard {
   createdAt: string;
   clashes: Clash[];
   flightsUrl: string | null;
+  /** Airport codes for the boarding-pass button, e.g. { from: "BLR", to: "GOI" }. */
+  flightRoute: { from: string; to: string } | null;
   weekPart: "weekend" | "weekday" | null;
   handleUnconfirmed: boolean;
 }
@@ -67,6 +69,12 @@ async function busyTimes(now: Date): Promise<Busy[]> {
   } catch {
     return busyCache?.busy ?? [];
   }
+}
+
+const HOME_AIRPORT = cityConfig(radarConfig.homeCity)?.airport ?? null;
+function routeTo(city: string): { from: string; to: string } | null {
+  const to = cityConfig(city)?.airport;
+  return HOME_AIRPORT && to && to !== HOME_AIRPORT ? { from: HOME_AIRPORT, to } : null;
 }
 
 export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<ShowCard[]> {
@@ -132,6 +140,7 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       createdAt: e.createdAt.toISOString(),
       clashes: clashes.get(e.id) ?? [],
       flightsUrl: e.date && !isHomeCity(e.city) ? flightsSearchUrl(e.city, e.date, e.endDate) : null,
+      flightRoute: routeTo(e.city),
       weekPart: e.date ? weekPart(e.date) : null,
       handleUnconfirmed: e.handleUnconfirmed,
     };

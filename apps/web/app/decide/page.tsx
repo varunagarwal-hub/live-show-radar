@@ -1,3 +1,4 @@
+import { DealIn } from "@/components/DealIn";
 import { Stub } from "@/components/Stub";
 import { requireUser } from "@/lib/auth";
 import { loadShows, sortByDeadline } from "@/lib/data";
@@ -14,11 +15,11 @@ export default async function DecidePage() {
       </h1>
       <p className="lede">Earliest deadline first: when early-bird closes, or when tickets go on sale if they aren't live yet.</p>
       {shows.length ? (
-        <div className="stubs">
+        <DealIn className="stubs">
           {shows.map((s) => (
             <Stub key={s.id} show={s} emphasis="decide" />
           ))}
-        </div>
+        </DealIn>
       ) : (
         <p className="empty">Nothing to decide right now. Maybe a show and it'll land here with its deadline.</p>
       )}

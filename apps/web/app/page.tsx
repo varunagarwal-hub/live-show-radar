@@ -1,11 +1,23 @@
 import Link from "next/link";
 import { radarConfig } from "@radar/config";
+import { DealIn } from "@/components/DealIn";
+import { Marquee } from "@/components/Marquee";
 import { Poster } from "@/components/Poster";
 import { Stub } from "@/components/Stub";
 import { requireUser } from "@/lib/auth";
-import { loadHome } from "@/lib/data";
+import { loadHome, type ShowCard } from "@/lib/data";
+import { DEADLINE_LABEL, shortCountdown, stubDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+/** What scrolls across the marquee: the next gig, then anything closing soon or undecided. */
+function marqueeItems(nextUp: ShowCard | null, closing: ShowCard[], decide: ShowCard[]): string[] {
+  const items: string[] = [];
+  if (nextUp) items.push(`Next up: ${nextUp.artistName} · ${nextUp.city} · ${stubDate(nextUp.date, nextUp.endDate)}`);
+  for (const s of closing.slice(0, 4)) items.push(`${s.artistName} · ${DEADLINE_LABEL[s.deadline!.kind].toLowerCase()} in ${shortCountdown(s.deadline!.at)}`);
+  for (const s of decide.slice(0, 3)) if (!closing.includes(s)) items.push(`Still deciding: ${s.artistName} · ${s.city}`);
+  return items.map((t) => t.toUpperCase());
+}
 
 export default async function NextUp() {
   await requireUser();
@@ -14,13 +26,15 @@ export default async function NextUp() {
 
   return (
     <>
+      <Marquee items={marqueeItems(nextUp, closingSoon, decide)} />
+
       {nextUp ? (
         <Poster show={nextUp} />
       ) : (
-        <section className="poster">
-          <div>
+        <section className="stage empty-stage">
+          <div className="stage-inner">
             <h1 className="poster-artist">Nothing booked yet</h1>
-            <p className="poster-meta">Tap Going on a show and it'll be printed here.</p>
+            <p className="poster-meta">Tap Going, or tear a stub off, and it'll be up in lights here.</p>
           </div>
         </section>
       )}
@@ -45,11 +59,11 @@ export default async function NextUp() {
           Decide by <Link href="/decide" className="count">see all</Link>
         </h2>
         {decide.length ? (
-          <div className="stubs">
+          <DealIn className="stubs">
             {decide.slice(0, 4).map((s) => (
               <Stub key={s.id} show={s} emphasis="decide" />
             ))}
-          </div>
+          </DealIn>
         ) : (
           <p className="empty">Nothing to decide right now. Maybe a show and it'll land here with its deadline.</p>
         )}
@@ -60,11 +74,11 @@ export default async function NextUp() {
           Just announced
         </h2>
         {recent.length ? (
-          <div className="stubs">
+          <DealIn className="stubs">
             {recent.map((s) => (
               <Stub key={s.id} show={s} />
             ))}
-          </div>
+          </DealIn>
         ) : (
           <p className="empty">{total ? "You've sorted every announced show." : "No shows announced yet. The radar checks every 30 minutes."}</p>
         )}

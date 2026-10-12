@@ -184,3 +184,26 @@ I checked the first build against §4.15 on a phone-sized viewport and on deskto
 | "Sun , 11 Oct": locale formatting added a stray space. | Small, but it's the masthead. | Dates are assembled from `formatToParts`. |
 
 Still open, by choice: the desktop poster has empty space on the right when an artist has no Spotify image. The seed has none; real artists from the Spotify sync fill that column with a navy-and-ink duotone.
+
+## 11. Version 2: the concert layer (Early Access)
+
+Karan asked for something that feels like being at a gig, with motion. This deliberately goes beyond §6's "one orchestrated interaction". The gig-poster foundation stays (riso inks, condensed type, ticket stubs), and these seven pieces are layered on top, animated with GSAP:
+
+1. **Stage-light hero.** The next show sits on a dark stage. Two ink spotlights (blue and pink, screen-blended) swing in from the rig, settle on the artist's name and keep breathing. The name rises word by word, and a halftone crowd of heads and raised hands fills the front edge.
+2. **Split-flap countdown.** "20 DAYS TO GO" lands like an airport departures board: each character flips through random glyphs before settling. Words stay together, so the board wraps between words on phones.
+3. **Venue marquee.** A bulb-lit strip with chasing lights scrolls the next show, closing deadlines and undecided shows. It pauses on hover or focus.
+4. **Tear to go.** Drag a stub's tear-off sideways: it tilts as you pull, rips away past the halfway mark, and the ADMITTED stamp lands. Tapping Going still works.
+5. **Gig-object buttons.** Actions are objects, not links:
+   - **Tickets:** a notched ticket, labelled "Best match" when the link is a ticketing-site jump.
+   - **Pre-show playlist:** a cassette whose reels spin on hover.
+   - **Search flights:** a boarding pass with the route (BLR ✈ GOI).
+   - **Artist's links:** a wristband.
+
+   They keep their printed colours in both themes.
+6. **Tour-dates calendar.** The month reads like the back of a tour t-shirt: big stacked dates and cities, Going shows printed in reverse with an ADMITTED stamp, Maybes highlighted. The month grid stays underneath on desktop.
+7. **Touches.**
+   - Equalizer bars bounce on the current tab.
+   - Stubs are dealt onto the page as they scroll in, with alternating tilts.
+   - The wordmark is a neon tube that flickers on in dark mode.
+
+**Restraint that's kept.** Every animation is skipped under `prefers-reduced-motion`, and when a page loads in a background tab, where browsers pause animation, so content is never left half-drawn. Body text is still navy on paper, or paper on the stage.

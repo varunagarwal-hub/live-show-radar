@@ -180,9 +180,18 @@ export interface AlertEvent {
 }
 
 /** A web search for the booking page: the fallback when no source gave a ticket link. */
+const TICKET_SITES = ["district.in", "in.bookmyshow.com", "skillboxes.com", "insider.in", "thumpn.com"];
+
+/**
+ * "Best match" booking link: a feeling-lucky search (DuckDuckGo !ducky) limited to Indian
+ * ticketing sites, so one tap usually opens the event's booking page itself. It can land on the
+ * wrong event, which is why it is always labelled "best match".
+ */
 export function ticketSearchUrl(artistName: string, city: string, date: string | null): string {
-  const when = date ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`)) : "";
-  return `https://www.google.com/search?q=${encodeURIComponent(`${artistName} ${city} ${when} tickets`.replace(/\s+/g, " ").trim())}`;
+  const when = date ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`)) : "";
+  const sites = TICKET_SITES.map((s) => `site:${s}`).join(" OR ");
+  const q = `!ducky ${artistName} ${city} ${when} tickets ${sites}`.replace(/\s+/g, " ").trim();
+  return `https://duckduckgo.com/?q=${encodeURIComponent(q)}`;
 }
 
 const LINK_PAGES = /(^|\.)(linktr\.ee|lnk\.to|bio\.link|beacons\.ai|hoo\.be|solo\.to|linkin\.bio|komi\.io|tap\.bio|campsite\.bio|later\.com|direct\.me|fanlink\.tv|ffm\.to)$/i;
@@ -204,7 +213,7 @@ export function bookingLines(e: Pick<AlertEvent, "ticketUrl" | "bioUrl" | "artis
   if (e.ticketUrl) return [`🛒 ${link(e.ticketUrl, "Open tickets")}`];
   const lines: string[] = [];
   if (isBookingLikeUrl(e.bioUrl)) lines.push(`🛒 ${link(e.bioUrl!, "Artist's links")} (booking links are usually here)`);
-  lines.push(`🔎 ${link(ticketSearchUrl(e.artistName, e.city, e.date), "Find tickets")}`);
+  lines.push(`🎟 ${link(ticketSearchUrl(e.artistName, e.city, e.date), "Tickets (best match)")}`);
   return lines;
 }
 
