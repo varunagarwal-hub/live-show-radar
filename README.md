@@ -211,7 +211,7 @@ Then open the *Actions* tab and enable workflows. Run **watchlist** once by hand
 |---|---|---|
 | `poll.yml` | :07 and :37 every hour | all sources → dedup → extract → match → store → alert |
 | `tiers.yml` | every 15 min | tier watcher, sale-start and decide-by reminders |
-| `watchlist.yml` | 00:40 → 06:10 IST daily | Spotify sync, tiers, MusicBrainz IDs, handle proposals, Instagram token refresh |
+| `watchlist.yml` | every 6 h from 06:10 IST | Spotify sync, tiers, MusicBrainz IDs, handle proposals, Instagram token refresh |
 | `sunday.yml` | Sun 03:30 → 09:00 IST | missed-show self-check, playlist refresh, digest |
 | `keepalive.yml` | 1st of each month | keeps scheduled workflows from being disabled |
 | `ci.yml` | on push and PR | typecheck, tests, dry-run cycle |
