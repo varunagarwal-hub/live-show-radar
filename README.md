@@ -130,7 +130,7 @@ Instagram is the earliest source, because announcements land there first. The ra
    4. You can leave the app in Development mode: as its admin, your own account can use these permissions without App Review.
 4. **Get a user token:**
    1. Open the [Graph API Explorer](https://developers.facebook.com/tools/explorer/) and select your app.
-   2. Add the permissions `instagram_basic`, `pages_show_list`, `pages_read_engagement` and `business_management`.
+   2. Add the permissions `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement` and `business_management`. Business Discovery needs `instagram_manage_insights` even though it reads other accounts. If your Page role came through Business Manager, also add `ads_read`.
    3. Click *Generate Access Token* and approve for your Page and Instagram account.
 5. **Make it long-lived (~60 days).** Run this server-side, because it contains the app secret:
 

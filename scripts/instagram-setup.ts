@@ -1,6 +1,6 @@
 /**
  * One-time Instagram setup (README → Instagram, steps 4–6).
- *   1. Graph API Explorer → generate a user token with instagram_basic, pages_show_list,
+ *   1. Graph API Explorer → generate a user token with instagram_basic, instagram_manage_insights, pages_show_list,
  *      pages_read_engagement, business_management → copy it.
  *   2. pnpm instagram:setup
  * Reads the short-lived token from the clipboard (or $SHORT_LIVED_TOKEN), exchanges it for a
