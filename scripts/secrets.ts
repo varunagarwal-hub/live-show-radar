@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 
 const ENV = join(import.meta.dirname, "../.env");
 
@@ -185,10 +186,20 @@ if (cmd === "set" && names.includes("--clipboard")) {
   console.log(Object.keys(updates).length ? `Generated: ${Object.keys(updates).join(", ")}` : "All random secrets already exist.");
 } else if (cmd === "push-vercel") {
   // Uses the Vercel CLI's own login and the project linked in .vercel/project.json.
-  const authFile = [join(process.env.APPDATA ?? "", "com.vercel.cli/Data/auth.json"), join(process.env.HOME ?? "", ".local/share/com.vercel.cli/auth.json"), join(process.env.HOME ?? "", "Library/Application Support/com.vercel.cli/auth.json")].find(existsSync);
+  const home = homedir();
+  const authFile = [
+    process.env.APPDATA && join(process.env.APPDATA, "com.vercel.cli/Data/auth.json"),
+    join(home, "AppData/Roaming/com.vercel.cli/Data/auth.json"),
+    join(home, ".local/share/com.vercel.cli/auth.json"),
+    join(home, "Library/Application Support/com.vercel.cli/auth.json"),
+  ].find((p): p is string => !!p && existsSync(p));
   const linkFile = join(import.meta.dirname, "../.vercel/project.json");
-  if (!authFile || !existsSync(linkFile)) {
-    console.log("Run `npx vercel login` and `npx vercel link` first.");
+  if (!authFile) {
+    console.log("No Vercel login found on this computer. Run `npx vercel login` first.");
+    process.exit(1);
+  }
+  if (!existsSync(linkFile)) {
+    console.log("This folder isn't linked to a Vercel project. Run `npx vercel link` first.");
     process.exit(1);
   }
   const token = (JSON.parse(readFileSync(authFile, "utf8")) as { token: string }).token;
