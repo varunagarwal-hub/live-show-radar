@@ -1,49 +1,58 @@
 name: deploy
-# Safety net for the dashboard: Vercel normally deploys every push to main by itself, but its
-# GitHub link has at times started builds half an hour late. This waits up to 3 minutes for
-# Vercel's own deployment of the pushed commit; if none appears, it triggers one through the
-# project's deploy hook (VERCEL_DEPLOY_HOOK secret; README → "Deploys"). When Vercel is on time
-# it does nothing, so there are never two deployments of the same commit.
+# Safety net for the dashboard. Vercel deploys every push to main by itself, but its GitHub
+# reporting is unreliable, so this checks the live site instead: it polls /api/version until the
+# dashboard is running the pushed commit (a normal build takes 2–3 minutes). If that hasn't
+# happened after 10 minutes, it triggers a deployment through the project's deploy hook
+# (VERCEL_DEPLOY_HOOK secret). When Vercel is on time it does nothing.
 on:
   push:
     branches: [main]
     paths-ignore: [".github/keepalive"]
   workflow_dispatch:
 
+# A newer push supersedes the check for an older one.
 concurrency:
   group: deploy
   cancel-in-progress: true
 
 permissions:
-  deployments: read
+  contents: read
+
+env:
+  SITE: https://live-show-radar-psi.vercel.app
 
 jobs:
   ensure-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
-      - name: Wait for Vercel, deploy through the hook if it's late
+      - name: Wait for the live site to run this commit
+        id: wait
         env:
-          GH_TOKEN: ${{ github.token }}
-          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
           SHA: ${{ github.sha }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual run: deploying now."
-          else
-            for i in $(seq 1 18); do
-              n=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${SHA}" -q '[.[] | select(.creator.login == "vercel[bot]")] | length')
-              if [ "${n:-0}" -gt 0 ]; then
-                echo "Vercel started deploying ${SHA::7} on its own after ~$((i * 10))s. Nothing to do."
-                exit 0
-              fi
-              sleep 10
-            done
-            echo "Vercel hasn't started deploying ${SHA::7} after 3 minutes."
-          fi
+          if [ "$MANUAL" = "true" ]; then echo "late=true" >> "$GITHUB_OUTPUT"; echo "Manual run: deploying now."; exit 0; fi
+          for i in $(seq 1 60); do
+            live=$(curl -s --max-time 10 "$SITE/api/version" | sed -n 's/.*"sha":"\([0-9a-f]*\)".*/\1/p')
+            if [ "$live" = "$SHA" ]; then
+              echo "Live after ~$((i * 10))s: the dashboard is running ${SHA::7}."
+              echo "late=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "After 10 minutes the dashboard is still on ${live:-unknown}, not ${SHA::7}."
+          echo "late=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy through the hook
+        if: steps.wait.outputs.late == 'true'
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
           if [ -z "$HOOK" ]; then
-            echo "::warning::VERCEL_DEPLOY_HOOK is not set, so this push may deploy late. See README → Deploys."
-            exit 0
+            echo "::warning::Vercel didn't deploy this push in time and VERCEL_DEPLOY_HOOK isn't set. See README → Deploys."
+            exit 1
           fi
           code=$(curl -s -o /tmp/hook.json -w '%{http_code}' -X POST "$HOOK")
           echo "Deploy hook answered HTTP $code"
