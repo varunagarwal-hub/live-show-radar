@@ -37,6 +37,7 @@ const OtherDateSchema = z.object({
   date: isoDate,
   end_date: isoDate.default(null),
   ticket_url: nullableText.default(null),
+  country: nullableText.default(null),
 });
 
 /** The spec's extraction contract (4.4), plus `other_dates` for multi-city tour posters and `country`. */
@@ -88,7 +89,7 @@ Return exactly these keys:
   "ticket_url": string | null,           // only a URL that actually appears in the content
   "confidence": number,                  // 0–1, how sure you are this is a real, specific upcoming show
   "evidence": string,                    // a short exact quote (max 200 chars) supporting your answer
-  "other_dates": [{ "city": string | null, "venue": string | null, "date": "YYYY-MM-DD" | null, "end_date": "YYYY-MM-DD" | null, "ticket_url": string | null }],
+  "other_dates": [{ "city": string | null, "venue": string | null, "date": "YYYY-MM-DD" | null, "end_date": "YYYY-MM-DD" | null, "ticket_url": string | null, "country": string | null }],
   "country": string | null               // e.g. "India"; null if unclear
 }
 
@@ -96,7 +97,7 @@ Rules:
 - Return null (or "unknown") rather than guess. Never invent a date, venue, price, URL or time.
 - Datetimes are Indian Standard Time unless stated; write them as "YYYY-MM-DDTHH:MM:SS+05:30".
 - Infer the year only when it is clearly the next occurrence of that date after the post date; otherwise null.
-- Multi-city tour posters: put the first date in city/venue/date and every other stop in other_dates.
+- Multi-city tour posters: put the first date in city/venue/date and every other stop in other_dates, giving each stop its own country (tours often add Dubai, Kathmandu, Dhaka or other cities abroad).
 - Captions may be in Hinglish or mix scripts ("BLR aa rahe hain", "tickets live hai"); read them normally.
 - Details may appear only on the poster image; read the image carefully.
 - Early-bird words include "early bird", "EB", "phase 1", "first 100 tickets", "pre-sale". "Opening" means a known future time.
@@ -151,19 +152,23 @@ export interface ShowCandidate {
 
 const NON_INDIA = /^(?!india$|in$|bharat$).+/i;
 
+/** Cities abroad that Indian tours often include. A safety net for when the model omits country. */
+const FOREIGN_CITIES = /^(dubai|abu dhabi|sharjah|doha|muscat|riyadh|jeddah|kuwait|bahrain|manama|kathmandu|pokhara|dhaka|colombo|thimphu|male|singapore|kuala lumpur|bangkok|london|manchester|birmingham|new york|toronto|vancouver|san francisco|los angeles|chicago|sydney|melbourne|auckland|berlin|paris|amsterdam|nairobi|karachi|lahore|islamabad)$/i;
+const isAbroad = (city: string | null, country: string | null) =>
+  Boolean((country && NON_INDIA.test(country.trim())) || (city && FOREIGN_CITIES.test(city.trim())));
+
 /**
  * Expands one extraction into per-artist, per-stop candidates. Drops shows clearly outside India,
  * dates in the past, and ticket URLs that never appeared in the source text (hallucination guard).
  */
 export function toCandidates(ex: Extraction, sourceText: string, now = new Date()): ShowCandidate[] {
   if (!ex.is_show_announcement || ex.artist_names.length === 0) return [];
-  if (ex.country && NON_INDIA.test(ex.country.trim())) return [];
   const today = istDate(now);
   const urlInSource = (u: string | null) => (u && sourceText.includes(u.replace(/^https?:\/\//, "").split(/[?#]/)[0]!) ? u : null);
   const stops = [
-    { city: ex.city, venue: ex.venue, date: ex.date, end_date: ex.end_date, ticket_url: ex.ticket_url },
+    { city: ex.city, venue: ex.venue, date: ex.date, end_date: ex.end_date, ticket_url: ex.ticket_url, country: ex.country },
     ...ex.other_dates,
-  ];
+  ].filter((s) => !isAbroad(s.city, s.country));
   const seen = new Set<string>();
   const out: ShowCandidate[] = [];
   const artists = [...new Set(ex.artist_names.map((a) => a.trim()).filter(Boolean))];

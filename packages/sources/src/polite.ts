@@ -20,7 +20,9 @@ async function rawFetch(url: string, accept: string): Promise<string> {
         redirect: "follow",
       });
       const body = await res.text();
-      if (looksLikeBotChallenge(res.status, body)) throw new BlockedError(url);
+      // A challenge page, or a flat 403 on a page robots.txt allows (sites often refuse data-centre
+      // addresses this way), is bot protection: report it as blocked and never work around it.
+      if (looksLikeBotChallenge(res.status, body) || res.status === 403) throw new BlockedError(url);
       if (!res.ok) throw new HttpError(res.status, url, body.slice(0, 300));
       return body;
     },

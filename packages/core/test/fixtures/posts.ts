@@ -212,3 +212,38 @@ export const POSTS: PostFixture[] = [
     expect: { candidates: [{ artistName: "Lifafa", city: "Kolkata", date: "2027-01-09", venue: null }], earlyBird: "unknown", ticketUrl: "https://www.songkick.com/concerts/123", firstTierPrice: 1499 },
   },
 ];
+
+POSTS.push({
+  name: "Tour poster mixing India and abroad keeps only Indian stops",
+  source: "instagram",
+  postedBy: "anuvjain",
+  hasImage: true,
+  text: "Instagram post by @anuvjain:\nJAAN INDIA TOUR (+ one in Dubai!) tickets live now",
+  response: JSON.stringify({
+    is_show_announcement: true,
+    artist_names: ["Anuv Jain"],
+    city: "Jaipur",
+    venue: null,
+    date: "2026-10-24",
+    end_date: null,
+    event_type: "concert",
+    tiers: [],
+    early_bird: { status: "unknown", opens_at: null, closes_at: null },
+    sale_starts_at: null,
+    ticket_url: null,
+    confidence: 0.95,
+    evidence: "JAAN INDIA TOUR",
+    other_dates: [
+      { city: "Chennai", venue: null, date: "2026-10-31", end_date: null, ticket_url: null, country: "India" },
+      { city: "Dubai", venue: null, date: "2026-11-20", end_date: null, ticket_url: null, country: "UAE" },
+      { city: "Kathmandu", venue: null, date: "2026-11-22", end_date: null, ticket_url: null },
+    ],
+    country: "India",
+  }),
+  expect: {
+    candidates: [
+      { artistName: "Anuv Jain", city: "Jaipur", date: "2026-10-24" },
+      { artistName: "Anuv Jain", city: "Chennai", date: "2026-10-31" },
+    ],
+  },
+});

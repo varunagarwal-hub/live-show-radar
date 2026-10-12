@@ -2,7 +2,7 @@ import { radarConfig } from "@radar/config";
 import { politeFetch, type PageFetcher } from "./polite";
 import { artistInSlug, parseSitemap } from "./sitemap";
 import { ListingSource, ldEventsToItems } from "./ticketing";
-import type { RawItem, SourceContext } from "./types";
+import { BlockedError, type RawItem, type SourceContext } from "./types";
 
 const BASE = "https://www.district.in";
 const DETAIL_SITEMAP = "https://cdn.district.in/sitemap/event-detail-pages.xml";
@@ -39,8 +39,11 @@ export class DistrictSource extends ListingSource {
         } catch (err) {
           errors.push(err);
           ctx.log(`district ${slug}: ${(err as Error).message}`);
+          // One block means every page will be blocked; stop instead of hammering.
+          if (err instanceof BlockedError) break;
         }
       }
+      if (errors.some((e) => e instanceof BlockedError)) break;
     }
 
     try {
