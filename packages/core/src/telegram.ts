@@ -185,11 +185,25 @@ export function ticketSearchUrl(artistName: string, city: string, date: string |
   return `https://www.google.com/search?q=${encodeURIComponent(`${artistName} ${city} ${when} tickets`.replace(/\s+/g, " ").trim())}`;
 }
 
+const LINK_PAGES = /(^|\.)(linktr\.ee|lnk\.to|bio\.link|beacons\.ai|hoo\.be|solo\.to|linkin\.bio|komi\.io|tap\.bio|campsite\.bio|later\.com|direct\.me|fanlink\.tv|ffm\.to)$/i;
+const TICKETING = /(^|\.)(district\.in|bookmyshow\.com|skillboxes\.com|insider\.in|thumpn\.com|ticketmaster\.[a-z.]+|bandsintown\.com|songkick\.com|platinumlist\.net|zomato\.com|paytm\.com|townscript\.com|allevents\.in)$/i;
+
+/** Only bio links that plausibly lead to tickets: link-in-bio pages, ticketing sites, tour pages. */
+export function isBookingLikeUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return LINK_PAGES.test(u.hostname) || TICKETING.test(u.hostname) || /tour|ticket|shows|live|concert|gigs?\b/i.test(u.pathname + u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** "Open tickets", or the artist's link page plus a search when no direct link is known. */
 export function bookingLines(e: Pick<AlertEvent, "ticketUrl" | "bioUrl" | "artistName" | "city" | "date">): string[] {
   if (e.ticketUrl) return [`🛒 ${link(e.ticketUrl, "Open tickets")}`];
   const lines: string[] = [];
-  if (e.bioUrl) lines.push(`🛒 ${link(e.bioUrl, "Artist's links")} (booking links are usually here)`);
+  if (isBookingLikeUrl(e.bioUrl)) lines.push(`🛒 ${link(e.bioUrl!, "Artist's links")} (booking links are usually here)`);
   lines.push(`🔎 ${link(ticketSearchUrl(e.artistName, e.city, e.date), "Find tickets")}`);
   return lines;
 }

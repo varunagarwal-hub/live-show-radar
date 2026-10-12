@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingLines, ticketSearchUrl } from "../src/telegram";
+import { bookingLines, isBookingLikeUrl, ticketSearchUrl } from "../src/telegram";
 
 const base = { artistName: "Anuv Jain", city: "Chennai", date: "2026-10-31" };
 
@@ -14,6 +14,14 @@ describe("booking links", () => {
     const lines = bookingLines({ ...base, ticketUrl: null, bioUrl: "https://linktr.ee/anuvjainshows" });
     expect(lines[0]).toContain('href="https://linktr.ee/anuvjainshows">Artist&#39;s links</a>'.replace("&#39;", "'"));
     expect(lines[1]).toContain("Find tickets");
+  });
+
+  it("only shows bio links that plausibly lead to tickets", () => {
+    for (const u of ["https://linktr.ee/anuvjainshows", "http://theweeknd.com/tour", "https://taylor.lnk.to/x", "https://sonunigamlive.com/", "https://in.bookmyshow.com/events/x"]) {
+      expect(isBookingLikeUrl(u)).toBe(true);
+    }
+    for (const u of ["https://www.tatwamasifoundation.com", "http://www.arrahman.com/", "https://youtube.com/javedali", null]) expect(isBookingLikeUrl(u)).toBe(false);
+    expect(bookingLines({ ...base, ticketUrl: null, bioUrl: "https://www.tatwamasifoundation.com" })).toHaveLength(1);
   });
 
   it("searches with artist, city and the full date", () => {

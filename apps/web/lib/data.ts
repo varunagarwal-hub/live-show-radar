@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
-import { ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
+import { isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
 import { artists, decisions, events, eventSources, jobRuns, playlists, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
 import type { TierJson } from "@radar/core/db/schema";
 import { getDb } from "./db";
@@ -113,7 +113,7 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       endDate: e.endDate,
       eventType: e.eventType,
       ticketUrl: e.ticketUrl,
-      bioUrl: a.bioUrl,
+      bioUrl: isBookingLikeUrl(a.bioUrl) ? a.bioUrl : null,
       searchUrl: ticketSearchUrl(a.name, e.city, e.date),
       tiers: e.tiers,
       earlyBirdStatus: e.earlyBirdStatus,
