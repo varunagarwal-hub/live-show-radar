@@ -1,11 +1,10 @@
 import { radarConfig } from "@radar/config";
-import { fetchText, BROWSER_UA } from "./http";
 
 /**
  * Finding the booking page for a show when no source gave a ticket link. Two ways, cheapest first:
  *
- * 1. The artist's link-in-bio page (Linktree etc.). Artists list every date there with its exact
- *    booking link ("Oktoberfest | Goa - 1st November 2026" → district.in/events/…), so a link
+ * 1. The artist's link-in-bio page, where its robots.txt allows reading (Linktree doesn't).
+ *    Artists list every date there with its exact booking link ("Oktoberfest | Goa - 1st November 2026" → district.in/events/…), so a link
  *    whose title or address names the show's city and date is a direct hit.
  * 2. A web search through Groq's browser_search tool, for shows the bio page doesn't cover
  *    (Diljit Dosanjh's tour, sold only on BookMyShow). Only event pages on ticketing sites that
@@ -130,10 +129,6 @@ export function parseLinkPage(html: string): BookingLink[] {
     out.push({ title: m[2]!.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim(), url: m[1]!.replace(/&amp;/g, "&") });
   }
   return out;
-}
-
-export async function fetchLinkPage(url: string, fetchPage: (u: string) => Promise<string> = (u) => fetchText(u, { headers: { "user-agent": BROWSER_UA }, attempts: 1, timeoutMs: 15_000 })): Promise<BookingLink[]> {
-  return parseLinkPage(await fetchPage(url));
 }
 
 const SearchAnswer = (raw: string): { url: string | null; date: string | null } => {

@@ -72,8 +72,8 @@ export default async function HealthPage() {
             <b>Artists&apos; own posts</b>, Google News, and your Bandsintown and Songkick emails.
           </li>
           <li>
-            <b>Booking pages</b>: each show&apos;s exact BookMyShow or District page is found from the artist&apos;s link-in-bio, or by a web search for shows
-            you&apos;re going to.
+            <b>Booking pages</b>: each show&apos;s exact BookMyShow or District page is found by a web search for shows you&apos;re going to,
+            or from the artist&apos;s link-in-bio where that page allows automated reading.
           </li>
           <li>
             <b>SkillBox</b> is read directly.

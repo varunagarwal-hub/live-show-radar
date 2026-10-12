@@ -5,9 +5,9 @@ import {
   dueReminders,
   esc,
   eventKeyboard,
-  fetchLinkPage,
   isLinkPage,
   matchBookingLink,
+  parseLinkPage,
   searchBookingUrl,
   type BookingLink,
   type BookingShow,
@@ -31,7 +31,7 @@ import {
 import type { DbHandle } from "@radar/core/db";
 import { events, tierSnapshots, type FieldChange } from "@radar/core/db/schema";
 import { loadSnapshot } from "@radar/core/db/queries";
-import { BlockedError, parseTierPage, politeFetch, type PageFetcher } from "@radar/sources";
+import { BlockedError, parseTierPage, politeFetch, RobotsDisallowedError, type PageFetcher } from "@radar/sources";
 
 export interface TiersDeps {
   getDb: () => Promise<DbHandle>;
@@ -231,7 +231,9 @@ async function lookUpBookingPages(d: TiersDeps, snapshot: Snapshot, today: strin
     .slice(0, LOOKUPS_PER_RUN);
   if (!due.length) return 0;
 
-  const linkPage = d.linkPage ?? ((u: string) => fetchLinkPage(u));
+  // politeFetch honours robots.txt: Linktree, for one, disallows all automated readers, so its
+  // pages are skipped and those shows rely on the web search instead.
+  const linkPage = d.linkPage ?? (async (u: string) => parseLinkPage(await politeFetch(u)));
   const search = d.searchBooking ?? (d.groqKey ? (s: BookingShow) => searchBookingUrl(d.groqKey!, s, d.groqModel || undefined) : null);
   const pages = new Map<string, BookingLink[]>();
   let searches = 0;
@@ -247,7 +249,8 @@ async function lookUpBookingPages(d: TiersDeps, snapshot: Snapshot, today: strin
         if (url) stats.bookingFromBio = (stats.bookingFromBio ?? 0) + 1;
       } catch (err) {
         pages.set(bio, []);
-        d.log(`bio page ${bio}: ${(err as Error).message}`);
+        if (err instanceof RobotsDisallowedError || err instanceof BlockedError) stats.bioPagesClosed = (stats.bioPagesClosed ?? 0) + 1;
+        else d.log(`bio page ${bio}: ${(err as Error).message}`);
       }
     }
     const searchKey = `booksearch:${e.id}`;
