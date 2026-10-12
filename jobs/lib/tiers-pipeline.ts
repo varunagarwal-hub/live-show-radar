@@ -43,8 +43,9 @@ export interface TiersDeps {
 
 const toDate = (s: string | null) => (s ? new Date(s) : null);
 
-export function snapshotToAlertEvent(e: SnapshotEvent): AlertEvent {
+export function snapshotToAlertEvent(e: SnapshotEvent, bioUrl: string | null = null): AlertEvent {
   return {
+    bioUrl,
     id: e.id,
     artistName: e.artistName,
     priorityTier: e.priorityTier,
@@ -92,7 +93,7 @@ export async function runTiers(d: TiersDeps) {
       kind: r.kind,
       eventId: r.eventId,
       chatId: d.chatId,
-      html: formatReminder(r.kind, snapshotToAlertEvent(ev), d.now),
+      html: formatReminder(r.kind, snapshotToAlertEvent(ev, snapshot.artists.find((a) => a.id === ev.artistId)?.bioUrl ?? null), d.now),
       keyboard: eventKeyboard(r.eventId, { compact: true }),
       dryRun: d.dryRun,
     });

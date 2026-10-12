@@ -17,6 +17,7 @@ export type IgMedia = z.infer<typeof Media>;
 const BusinessDiscovery = z.object({
   business_discovery: z.object({
     username: z.string(),
+    website: z.string().optional(),
     media: z.object({ data: z.array(Media) }).optional(),
   }),
 });
@@ -42,7 +43,7 @@ const MEDIA_FIELDS = "id,caption,media_type,media_url,thumbnail_url,permalink,ti
 
 /** Business Discovery URL without the token (safe to log). */
 export function businessDiscoveryUrl(cfg: Pick<InstagramConfig, "userId" | "version" | "postsPerCall">, handle: string): string {
-  const fields = `business_discovery.username(${handle}){username,media.limit(${cfg.postsPerCall}){${MEDIA_FIELDS}}}`;
+  const fields = `business_discovery.username(${handle}){username,website,media.limit(${cfg.postsPerCall}){${MEDIA_FIELDS}}}`;
   return `https://graph.facebook.com/${cfg.version}/${cfg.userId}?fields=${encodeURIComponent(fields)}`;
 }
 
@@ -138,7 +139,10 @@ export class InstagramSource implements Source {
   }
 
   /** One Business Discovery call. Exposed for the weekly self-check. */
-  async fetchPosts(handle: string): Promise<{ media: IgMedia[]; usage: number }> {
+  /** Bio links seen this run (handle → URL), e.g. an artist's Linktree. */
+  readonly websites = new Map<string, string>();
+
+  async fetchPosts(handle: string): Promise<{ media: IgMedia[]; usage: number; website: string | null }> {
     const url = businessDiscoveryUrl(this.cfg, handle);
     let res: Response;
     try {
@@ -156,7 +160,9 @@ export class InstagramSource implements Source {
     }
     const usage = appUsagePercent(res.headers.get("x-app-usage"));
     const body = BusinessDiscovery.parse(await res.json());
-    return { media: body.business_discovery.media?.data ?? [], usage };
+    const website = body.business_discovery.website?.trim() || null;
+    if (website) this.websites.set(handle.toLowerCase(), website);
+    return { media: body.business_discovery.media?.data ?? [], usage, website };
   }
 
   async fetchNewItems(ctx: SourceContext): Promise<RawItem[]> {

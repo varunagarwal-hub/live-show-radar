@@ -175,6 +175,23 @@ export interface AlertEvent {
   urgency: Urgency;
   handleUnconfirmed: boolean;
   sources: { source: string; url: string | null }[];
+  /** Artist's Instagram bio link, shown when there is no direct ticket link. */
+  bioUrl?: string | null;
+}
+
+/** A web search for the booking page: the fallback when no source gave a ticket link. */
+export function ticketSearchUrl(artistName: string, city: string, date: string | null): string {
+  const when = date ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`)) : "";
+  return `https://www.google.com/search?q=${encodeURIComponent(`${artistName} ${city} ${when} tickets`.replace(/\s+/g, " ").trim())}`;
+}
+
+/** "Open tickets", or the artist's link page plus a search when no direct link is known. */
+export function bookingLines(e: Pick<AlertEvent, "ticketUrl" | "bioUrl" | "artistName" | "city" | "date">): string[] {
+  if (e.ticketUrl) return [`🛒 ${link(e.ticketUrl, "Open tickets")}`];
+  const lines: string[] = [];
+  if (e.bioUrl) lines.push(`🛒 ${link(e.bioUrl, "Artist's links")} (booking links are usually here)`);
+  lines.push(`🔎 ${link(ticketSearchUrl(e.artistName, e.city, e.date), "Find tickets")}`);
+  return lines;
 }
 
 const TIER_STATUS: Record<TierJson["status"], string> = { open: "on sale", upcoming: "not yet", sold_out: "sold out", unknown: "" };
@@ -228,7 +245,7 @@ export function formatAlert(e: AlertEvent, now = new Date()): string {
       ? `${URGENCY_EMOJI.possible} <b>Possible show, please check</b>: ${esc(e.artistName)}`
       : `${URGENCY_EMOJI[e.urgency]} <b>${esc(e.artistName)}</b> · tier ${e.priorityTier}`;
   const lines = [head, `📍 ${e.venue ? `${esc(e.venue)}, ` : ""}${esc(e.city)}`, `📅 ${dateLine(e)}`, ...ticketLines(e, now)];
-  if (e.ticketUrl) lines.push(`🛒 ${link(e.ticketUrl, "Open tickets")}`);
+  lines.push(...bookingLines(e));
   const srcs = e.sources.filter((s) => s.url);
   if (srcs.length) lines.push(`🔗 ${srcs.slice(0, 4).map((s) => link(s.url!, s.source)).join(" · ")}`);
   if (e.confidence < 0.9) lines.push(`Confidence ${e.confidence.toFixed(2)}`);
@@ -246,7 +263,6 @@ export function formatReminder(kind: ReminderKind, e: AlertEvent, now = new Date
       : kind === "early_bird_reminder"
         ? `⏰ <b>Early-bird for ${esc(e.artistName)} opens ${e.earlyBirdOpensAt ? formatWhenIST(e.earlyBirdOpensAt, now) : "soon"}</b>`
         : `⏰ <b>Tickets for ${esc(e.artistName)} go on sale ${e.saleStartsAt ? formatWhenIST(e.saleStartsAt, now) : "soon"}</b>`;
-  const lines = [head, `📍 ${e.venue ? `${esc(e.venue)}, ` : ""}${esc(e.city)} · ${dateLine(e)}`, ...ticketLines(e, now)];
-  if (e.ticketUrl) lines.push(`🛒 ${link(e.ticketUrl, "Open tickets")}`);
+  const lines = [head, `📍 ${e.venue ? `${esc(e.venue)}, ` : ""}${esc(e.city)} · ${dateLine(e)}`, ...ticketLines(e, now), ...bookingLines(e)];
   return lines.join("\n");
 }

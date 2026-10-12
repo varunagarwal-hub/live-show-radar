@@ -17,7 +17,7 @@ import {
   type TelegramSink,
 } from "@radar/core";
 import type { DbHandle } from "@radar/core/db";
-import { rawItems } from "@radar/core/db/schema";
+import { artists, rawItems } from "@radar/core/db/schema";
 import { knownDedupKeys, loadSnapshot } from "@radar/core/db/queries";
 import type { InstagramSource, RawItem, Source, SourceHealth } from "@radar/sources";
 import { EventCache, storeCandidate, type StoreContext } from "./store";
@@ -89,6 +89,20 @@ export async function runPoll(d: PollDeps): Promise<PollResult> {
     }
     const h0 = src.health() as SourceHealth & { skipped?: boolean };
     if (!h0.skipped) health.push({ source: src.name, health: h0 });
+  }
+
+  // Artists' Instagram bio links (shown when a show has no direct ticket link). Written only when
+  // new or changed, which is rare, so this almost never wakes the database on its own.
+  const bioUpdates = d.instagram
+    ? [...d.instagram.websites].flatMap(([handle, url]) =>
+        snapshot!.artists.filter((a) => a.instagramHandle?.toLowerCase() === handle && a.bioUrl !== url).map((a) => ({ id: a.id, url })),
+      )
+    : [];
+  if (bioUpdates.length) {
+    const hh = await db();
+    await hh.batch(bioUpdates.map((u) => hh.db.update(artists).set({ bioUrl: u.url }).where(eq(artists.id, u.id))));
+    stats.bioLinks = bioUpdates.length;
+    wroteDb = true;
   }
 
   // 3. Cheap filters before any LLM call or database wake-up.

@@ -52,6 +52,8 @@ export const artists = pgTable(
     followed: boolean().notNull().default(false),
     muted: boolean().notNull().default(false),
     imageUrl: text(),
+    /** The bio link on the artist's Instagram (often a Linktree with per-city ticket links). */
+    bioUrl: text(),
     /** Lowered by "Wrong artist" feedback; fuzzy matches must clear fuzzyMatchFloor / weight. */
     matchWeight: real().notNull().default(1),
     /** Handle proposal has been requested from the LLM (so we ask only once). */

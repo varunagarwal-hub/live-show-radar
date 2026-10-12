@@ -41,6 +41,7 @@ export const SnapshotArtist = z.object({
   matchWeight: z.number(),
   muted: z.boolean(),
   priorityTier: z.enum(["A", "B", "C"]),
+  bioUrl: z.string().nullable().default(null),
 });
 
 export const SnapshotEvent = z.object({

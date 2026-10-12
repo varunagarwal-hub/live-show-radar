@@ -12,6 +12,8 @@ export interface WatchArtist {
   matchWeight: number;
   muted: boolean;
   priorityTier: "A" | "B" | "C";
+  /** Instagram bio link (often a Linktree listing ticket links per city). */
+  bioUrl?: string | null;
 }
 
 export type MatchMethod = "spotify_id" | "handle" | "exact" | "fuzzy";

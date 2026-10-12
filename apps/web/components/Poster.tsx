@@ -27,9 +27,13 @@ export function Poster({ show }: { show: ShowCard }) {
           ) : (
             <span>Playlist on its way</span>
           )}
-          {show.ticketUrl && (
+          {show.ticketUrl ? (
             <a href={show.ticketUrl} target="_blank" rel="noopener noreferrer">
               Tickets
+            </a>
+          ) : (
+            <a href={show.bioUrl ?? show.searchUrl} target="_blank" rel="noopener noreferrer">
+              {show.bioUrl ? "Artist's links" : "Find tickets"}
             </a>
           )}
           {show.flightsUrl && (

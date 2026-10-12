@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
-import { decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
+import { ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
 import { artists, decisions, events, eventSources, jobRuns, playlists, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
 import type { TierJson } from "@radar/core/db/schema";
 import { getDb } from "./db";
@@ -20,6 +20,9 @@ export interface ShowCard {
   endDate: string | null;
   eventType: string;
   ticketUrl: string | null;
+  /** Artist's Instagram bio link, and a ticket search, for shows without a direct link. */
+  bioUrl: string | null;
+  searchUrl: string;
   tiers: TierJson[];
   earlyBirdStatus: "open" | "opening" | "sold_out" | "none" | "unknown";
   earlyBirdClosesAt: string | null;
@@ -110,6 +113,8 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       endDate: e.endDate,
       eventType: e.eventType,
       ticketUrl: e.ticketUrl,
+      bioUrl: a.bioUrl,
+      searchUrl: ticketSearchUrl(a.name, e.city, e.date),
       tiers: e.tiers,
       earlyBirdStatus: e.earlyBirdStatus,
       earlyBirdClosesAt: iso(e.earlyBirdClosesAt),

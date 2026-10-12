@@ -169,7 +169,7 @@ export async function storeCandidate(sc: StoreContext, cache: EventCache, c: Sho
 }
 
 /** Sends the one new-show alert (or the quiet possible-show note) for an event, if not sent yet. */
-export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pick<WatchArtist, "name" | "priorityTier">): Promise<void> {
+export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pick<WatchArtist, "name" | "priorityTier" | "bioUrl">): Promise<void> {
   const sources = await sc.h.db.select({ source: eventSources.source, url: eventSources.url }).from(eventSources).where(eq(eventSources.eventId, row.id));
   const ae = toAlertEvent(row, artist, sources);
   const possible = row.status === "possible";
@@ -186,8 +186,9 @@ export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pic
   if (res === "sent") bump(sc.stats, possible ? "possibleSent" : "alertsSent");
 }
 
-export function toAlertEvent(row: EventRow, artist: Pick<WatchArtist, "name" | "priorityTier">, sources: { source: string; url: string | null }[]): AlertEvent {
+export function toAlertEvent(row: EventRow, artist: Pick<WatchArtist, "name" | "priorityTier" | "bioUrl">, sources: { source: string; url: string | null }[]): AlertEvent {
   return {
+    bioUrl: artist.bioUrl ?? null,
     id: row.id,
     artistName: artist.name,
     priorityTier: artist.priorityTier,

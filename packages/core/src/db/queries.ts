@@ -68,6 +68,7 @@ export async function loadSnapshot(h: DbHandle, now = new Date()): Promise<Snaps
       matchWeight: a.matchWeight,
       muted: a.muted,
       priorityTier: a.priorityTier,
+      bioUrl: a.bioUrl,
     })),
     watchedAccounts: accountRows.map((a) => ({ handle: a.handle, kind: a.kind, city: a.city })),
     upcoming,

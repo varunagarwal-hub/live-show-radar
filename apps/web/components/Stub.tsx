@@ -80,10 +80,21 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
             <button className="btn" aria-pressed={decision === "pass"} disabled={pending} onClick={() => decide("pass")}>
               Pass
             </button>
-            {show.ticketUrl && (
+            {show.ticketUrl ? (
               <a className="btn link" href={show.ticketUrl} target="_blank" rel="noopener noreferrer">
                 Open tickets
               </a>
+            ) : (
+              <>
+                {show.bioUrl && (
+                  <a className="btn link" href={show.bioUrl} target="_blank" rel="noopener noreferrer" title="The artist's link page usually has a booking link per city">
+                    Artist's links
+                  </a>
+                )}
+                <a className="btn link" href={show.searchUrl} target="_blank" rel="noopener noreferrer">
+                  Find tickets
+                </a>
+              </>
             )}
             {show.flightsUrl && (
               <a className="btn link" href={show.flightsUrl} target="_blank" rel="noopener noreferrer">
