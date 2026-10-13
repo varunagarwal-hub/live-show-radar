@@ -1750,3 +1750,31 @@
     animation: none;
   }
 }
+
+/* ---------- carousel controls: a solid mixing-desk panel over the crowd ---------- */
+/* Same navy-and-bulb look as the marquee in both themes, so the counter and arrows never blend
+   into the halftone crowd behind them. */
+.stage-controls {
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  background: #0b1020;
+  color: var(--bulb);
+  border: 2px solid var(--bulb);
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--pink);
+}
+.sc-btn {
+  width: 38px;
+  height: 38px;
+  border: 2px solid #e9ebe6;
+  background: #1b2745;
+  color: #e9ebe6;
+}
+.sc-count {
+  color: var(--bulb);
+  font-size: 1.1rem;
+  min-width: 2.8em;
+}
+.sc-dots i {
+  background: rgb(233 235 230 / 0.45);
+}

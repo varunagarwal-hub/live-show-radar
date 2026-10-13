@@ -194,14 +194,20 @@ if (cmd === "set" && names.includes("--clipboard")) {
 } else if (cmd === "login") {
   // Username + password for the owner's dashboard. The password stays in .env (LOGIN_PASSWORD, for
   // you to share) and is copied to the clipboard; only its scrypt hash goes to Vercel.
+  // `login --keep` re-hashes the LOGIN_PASSWORD already in .env (after you edit it by hand).
+  const keep = names.includes("--keep");
   const username = names.find((n) => /^[a-z0-9._-]{3,32}$/i.test(n)) ?? env.get("LOGIN_USERNAME") ?? "earlyaccess";
   const abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes(16);
-  const password = Array.from(bytes, (b) => abc[b % abc.length]).join("").replace(/(.{4})(?!$)/g, "$1-");
+  const password = keep ? (env.get("LOGIN_PASSWORD") ?? "") : Array.from(bytes, (b) => abc[b % abc.length]).join("").replace(/(.{4})(?!$)/g, "$1-");
+  if (password.length < 8) {
+    console.log("LOGIN_PASSWORD in .env must be at least 8 characters.");
+    process.exit(1);
+  }
   const salt = randomBytes(16);
   const hash = scryptSync(password, salt, 32);
   writeEnv({ LOGIN_USERNAME: username, LOGIN_PASSWORD: password, LOGIN_PASSWORD_HASH: `scrypt$${salt.toString("base64url")}$${hash.toString("base64url")}` });
-  const copied = process.platform === "win32" && spawnSync("clip", { input: password }).status === 0;
+  const copied = !keep && process.platform === "win32" && spawnSync("clip", { input: password }).status === 0;
   console.log(`Saved login "${username}" to .env (LOGIN_PASSWORD).${copied ? " The password is on your clipboard." : ""}`);
   console.log("Next: pnpm secrets push-vercel LOGIN_USERNAME LOGIN_PASSWORD_HASH (then redeploy).");
 } else if (cmd === "generate") {
