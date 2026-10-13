@@ -196,7 +196,7 @@ if (cmd === "set" && names.includes("--clipboard")) {
   // you to share) and is copied to the clipboard; only its scrypt hash goes to Vercel.
   // `login --keep` re-hashes the LOGIN_PASSWORD already in .env (after you edit it by hand).
   const keep = names.includes("--keep");
-  const username = names.find((n) => /^[a-z0-9._-]{3,32}$/i.test(n)) ?? env.get("LOGIN_USERNAME") ?? "earlyaccess";
+  const username = names.find((n) => !n.startsWith("-") && /^[a-z0-9._-]{3,32}$/i.test(n)) ?? "earlyaccess";
   const abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes(16);
   const password = keep ? (env.get("LOGIN_PASSWORD") ?? "") : Array.from(bytes, (b) => abc[b % abc.length]).join("").replace(/(.{4})(?!$)/g, "$1-");
