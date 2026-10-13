@@ -39,7 +39,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
           <SignInButton />
         </div>
         <p className="si-rise si-small">
-          Every show your artists announce in India, before the early-birds are gone. Got an invite? Sign in, then enter your code.
+          Every show your artists announce in India, before the early-birds are gone. Got an invite? Sign in, then enter your code. <a href="/privacy">Privacy</a>
         </p>
       </div>
       <BackstagePass />

@@ -1604,3 +1604,11 @@
   text-transform: uppercase;
   max-width: 280px;
 }
+
+/* ---------- privacy ---------- */
+.privacy {
+  max-width: 760px;
+}
+.privacy .section-title {
+  margin-top: 28px;
+}

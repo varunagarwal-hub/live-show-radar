@@ -18,7 +18,7 @@ const DESKTOP = LINKS.slice(0, 4);
 
 const isCurrent = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href) || (href === "/more" && MORE.some((m) => path.startsWith(m.href))));
 /** Signed out (or not let in yet) there is nowhere to go: the sign-in and invite pages stand alone. */
-const isDoor = (path: string) => path.startsWith("/signin") || path.startsWith("/join");
+const isDoor = (path: string) => path.startsWith("/signin") || path.startsWith("/join") || path.startsWith("/privacy");
 
 /** Three bouncing bars: the "now playing" mark on the current tab. */
 function Equalizer() {
