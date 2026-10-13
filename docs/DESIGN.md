@@ -207,3 +207,15 @@ Karan asked for something that feels like being at a gig, with motion. This deli
    - The logo is a pink ticket stub with a perforation and an admit-one star, beside the wordmark. (A neon-tube wordmark was tried and dropped: its glow spilled past the page edge.)
 
 **Restraint that's kept.** Every animation is skipped under `prefers-reduced-motion`, and when a page loads in a background tab, where browsers pause animation, so content is never left half-drawn. Body text is still navy on paper, or paper on the stage.
+
+## 12. Version 3: more of the gig, everywhere
+
+Small additions on top of §11, same inks and type:
+
+- **Sign-in is the backstage door.** An all-access pass on a pink lanyard drops from the rig, swings and settles; grab it and it swings from the strap. Spotlights and the halftone crowd from the stage, and the sign-in button is the yellow gig ticket ("Get in"). Navigation is hidden until you're in.
+- **Between pages,** a pink-and-blue stage light sweeps across while the new page rises in (0.7 s).
+- **Every press** throws a small spark of ink dots; **Going** fires a confetti cannon of ticket stubs and stars from the stub.
+- **Section titles** below the fold rise into place as they scroll in. Titles already on screen never move.
+- **Phones get the artist photo:** on the stage it's a duotone print taped to the top corner instead of being hidden.
+
+All of it is skipped under `prefers-reduced-motion`, and in background tabs.

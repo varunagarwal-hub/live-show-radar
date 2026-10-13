@@ -8,7 +8,7 @@ import { gsap, prefersReducedMotion } from "./motion";
 import { SplitFlap } from "./SplitFlap";
 
 /** A halftone crowd: heads, shoulders and a few raised hands, printed in dots. */
-function Crowd() {
+export function Crowd() {
   const people = Array.from({ length: 22 }, (_, i) => {
     const x = 12 + i * 46 + (i % 3) * 6;
     const h = 30 + ((i * 37) % 22);

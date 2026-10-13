@@ -6,6 +6,7 @@ import { decideAction } from "@/lib/actions";
 import { cityCode, DEADLINE_LABEL, formatPrice, shortWhen, stubDate } from "@/lib/format";
 import { BoardingPassButton, CassetteButton, TicketButton, WristbandButton } from "./ActionButtons";
 import { Countdown } from "./Countdown";
+import { confettiFrom } from "./Effects";
 import { Draggable, gsap } from "./motion";
 
 type Decision = ShowCard["decision"];
@@ -28,6 +29,7 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const tearRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
 
   const deadlinePassed = show.deadline ? Date.parse(show.deadline.at) <= Date.now() : false;
   const torn = show.soldOut || deadlinePassed || (show.earlyBirdStatus === "sold_out" && !show.deadline && !show.tiers.some((t) => t.status === "open"));
@@ -39,7 +41,10 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
     const prev = decision;
     setDecision(next);
     setError(null);
-    if (next === "going") setJustAdmitted(true);
+    if (next === "going") {
+      setJustAdmitted(true);
+      if (prev !== "going") confettiFrom(cardRef.current);
+    }
     start(async () => {
       const r = await decideAction(show.id, next).catch(() => ({ ok: false }));
       if (!r.ok) {
@@ -95,7 +100,7 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
   const label = `${show.artistName}, ${stubDate(show.date, show.endDate)}, ${show.city}`;
 
   return (
-    <article className={classes} aria-label={label}>
+    <article ref={cardRef} className={classes} aria-label={label}>
       <div className="stub-main">
         <span className={`ink-bar ${show.isHome ? "home" : "away"}${urgent ? " urgent" : ""}`} aria-hidden="true" />
         <div className="stub-date">{stubDate(show.date, show.endDate)}</div>

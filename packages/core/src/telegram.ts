@@ -3,7 +3,7 @@ import { fetchJson, fetchWithRetry } from "./http";
 import type { TierJson } from "./db/schema";
 import { decideByDeadline, DEADLINE_LABEL } from "./deadline";
 import { URGENCY_EMOJI, type Urgency } from "./rules";
-import { countdown, formatDateIST, formatWhenIST } from "./time";
+import { countdown, daysUntil, formatDateIST, formatWhenIST } from "./time";
 
 export interface InlineButton {
   text: string;
@@ -16,6 +16,8 @@ export interface SendOptions {
   keyboard?: InlineKeyboard;
   replyTo?: number;
   silent?: boolean;
+  /** Artist photo: the message goes out as a picture with the text as its caption. */
+  photo?: string | null;
 }
 
 /** What jobs and the webhook need from Telegram. The real client and test fakes both implement it. */
@@ -41,6 +43,25 @@ export function telegramClient(botToken: string): TelegramSink & { call(method: 
   return {
     call,
     async sendMessage(chatId, html, opts = {}) {
+      // Captions are capped at 1024 characters; longer alerts, and photos Telegram can't fetch,
+      // go out as plain text instead.
+      if (opts.photo && html.length <= 1024) {
+        try {
+          const p = TgMessage.parse(
+            await call("sendPhoto", {
+              chat_id: chatId,
+              photo: opts.photo,
+              caption: html,
+              parse_mode: "HTML",
+              disable_notification: opts.silent ?? false,
+              reply_markup: opts.keyboard ? { inline_keyboard: opts.keyboard } : undefined,
+            }),
+          );
+          return { messageId: p.message_id };
+        } catch {
+          // fall through to a text message
+        }
+      }
       const r = TgMessage.parse(
         await call("sendMessage", {
           chat_id: chatId,
@@ -179,6 +200,10 @@ export interface AlertEvent {
   bioUrl?: string | null;
   /** Booking page found by the lookup in the tiers job (booking.ts). */
   bookingUrl?: string | null;
+  /** Show title from the source ("Aura India Tour"), when there is one. */
+  title?: string | null;
+  /** Artist photo (Spotify), sent as the alert's picture. */
+  imageUrl?: string | null;
 }
 
 /**
@@ -263,18 +288,47 @@ export function ticketLines(e: AlertEvent, now = new Date()): string[] {
   return lines;
 }
 
+const SOURCE_LABEL: Record<string, string> = { instagram: "Instagram", news: "News", district: "District", bookmyshow: "BookMyShow", skillbox: "SkillBox", email: "Fan-app email" };
+
+/** " · in 17 days", " · tomorrow", " · tonight": how far off the show is. */
+function whenAway(date: string | null, now: Date): string {
+  if (!date) return "";
+  const d = daysUntil(date, now);
+  return d < 0 ? "" : d === 0 ? " · tonight" : d === 1 ? " · tomorrow" : ` · in ${d} days`;
+}
+
+/**
+ * The new-show alert, laid out like a gig flyer: a one-word banner, the artist, where and when,
+ * the ticket state, the booking link, then small print (sources, confidence).
+ */
 export function formatAlert(e: AlertEvent, now = new Date()): string {
-  const head =
+  const banner =
     e.urgency === "possible"
-      ? `${URGENCY_EMOJI.possible} <b>Possible show, please check</b>: ${esc(e.artistName)}`
-      : `${URGENCY_EMOJI[e.urgency]} <b>${esc(e.artistName)}</b> · tier ${e.priorityTier}`;
-  const lines = [head, `📍 ${e.venue ? `${esc(e.venue)}, ` : ""}${esc(e.city)}`, `📅 ${dateLine(e)}`, ...ticketLines(e, now)];
-  lines.push(...bookingLines(e));
+      ? `${URGENCY_EMOJI.possible} <b>POSSIBLE SHOW</b> · please check`
+      : `${URGENCY_EMOJI[e.urgency]} <b>NEW SHOW</b>${e.urgency === "urgent" ? " · don't miss this one" : ""}`;
+  const lines = [banner, "", `🎤 <b>${esc(e.artistName)}</b>${e.priorityTier === "A" ? " ★" : ""}`];
+  if (e.title && !e.title.toLowerCase().includes(e.artistName.toLowerCase())) lines.push(`<i>${esc(e.title)}</i>`);
+  lines.push(`📍 ${e.venue ? `${esc(e.venue)}, ` : ""}${esc(e.city)}`, `📅 ${dateLine(e)}${whenAway(e.date, now)}`);
+  // "Early-bird: not announced" says nothing useful on a fresh announcement.
+  const tickets = ticketLines(e, now).filter((l) => !l.endsWith(EB_STATUS.unknown));
+  if (tickets.length) lines.push("", ...tickets);
+  lines.push("", ...bookingLines(e));
+  const small: string[] = [];
   const srcs = e.sources.filter((s) => s.url);
-  if (srcs.length) lines.push(`🔗 ${srcs.slice(0, 4).map((s) => link(s.url!, s.source)).join(" · ")}`);
-  if (e.confidence < 0.9) lines.push(`Confidence ${e.confidence.toFixed(2)}`);
+  if (srcs.length) small.push(`via ${srcs.slice(0, 4).map((s) => link(s.url!, SOURCE_LABEL[s.source] ?? s.source)).join(" · ")}`);
+  if (e.confidence < 0.9) small.push(`confidence ${Math.round(e.confidence * 100)}%`);
+  if (small.length) lines.push(`<i>${small.join(" · ")}</i>`);
   if (e.handleUnconfirmed) lines.push("⚠️ Found via an Instagram handle you haven't confirmed yet");
   return lines.join("\n");
+}
+
+/** A further date of a tour announced minutes ago: a short quiet note instead of another full alert. */
+export function formatTourDate(e: AlertEvent, now = new Date()): string {
+  return [
+    `➕ <b>${esc(e.artistName)}</b>: another date`,
+    `📍 ${e.venue ? `${esc(e.venue)}, ` : ""}${esc(e.city)} · 📅 ${dateLine(e)}${whenAway(e.date, now)}`,
+    ...bookingLines(e),
+  ].join("\n");
 }
 
 export type ReminderKind = "sale_reminder" | "early_bird_reminder" | "decide_reminder";

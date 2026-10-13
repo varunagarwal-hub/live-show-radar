@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
 import {
   computeUrgency,
@@ -6,6 +6,7 @@ import {
   findExisting,
   fingerprint,
   formatAlert,
+  formatTourDate,
   matchArtist,
   mergeEvent,
   normalizeCity,
@@ -184,16 +185,30 @@ export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pic
       upgraded = true;
     }
   }
-  const html = formatAlert(ae, sc.now);
+  const [art] = await sc.h.db.select({ imageUrl: artists.imageUrl }).from(artists).where(eq(artists.id, row.artistId)).limit(1);
+  ae.title = row.title;
+  // A tour drops many dates at once (Diljit: 7 in two minutes). The first two get full alerts;
+  // further dates of that artist within 20 minutes arrive as short, silent notes.
+  let tourDate = false;
+  if (!possible && !upgraded) {
+    const recent = await sc.h.db
+      .select({ id: alerts.id })
+      .from(alerts)
+      .innerJoin(events, eq(alerts.eventId, events.id))
+      .where(and(eq(events.artistId, row.artistId), eq(alerts.kind, "new_event"), eq(alerts.dryRun, sc.dryRun), gte(alerts.sentAt, new Date(sc.now.getTime() - 20 * 60_000))))
+      .limit(2);
+    tourDate = recent.length >= 2;
+  }
+  const html = tourDate ? formatTourDate(ae, sc.now) : formatAlert(ae, sc.now);
   const res = await sendOnce(sc.h, sc.tg, {
     dedupKey: possible ? `possible:${row.id}` : `new:${row.id}`,
     kind: possible ? "possible_show" : "new_event",
     eventId: row.id,
     chatId: sc.chatId,
-    html: upgraded ? `✅ <b>Now confirmed</b>
-${html}` : html,
-    keyboard: eventKeyboard(row.id, { compact: possible }),
-    silent: possible,
+    html: upgraded ? `✅ <b>Now confirmed</b>\n${html}` : html,
+    keyboard: eventKeyboard(row.id, { compact: possible || tourDate }),
+    silent: possible || tourDate,
+    photo: possible || tourDate ? null : (art?.imageUrl ?? null),
     dryRun: sc.dryRun,
   });
   if (res === "sent") bump(sc.stats, possible ? "possibleSent" : "alertsSent");

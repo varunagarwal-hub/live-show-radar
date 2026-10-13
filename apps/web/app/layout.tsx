@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
 import Link from "next/link";
 import { BottomNav, DesktopNav, SignOutButton, ThemeToggle } from "@/components/Chrome";
+import { Effects } from "@/components/Effects";
 import { mastheadDate } from "@/lib/format";
 import "./globals.css";
 import "./stage.css";
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main">{children}</main>
         </div>
         <BottomNav />
+        <Effects />
       </body>
     </html>
   );

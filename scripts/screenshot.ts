@@ -51,6 +51,8 @@ const shots = [
   { name: "home-desktop-dark", path: "/", width: 1536, height: 900, mobile: false, scheme: "dark" },
   { name: "calendar-mobile", path: `/calendar?m=${new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 7)}`, width: 390, height: 844, mobile: true, scheme: "light" },
   { name: "calendar-desktop", path: `/calendar?m=${new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 7)}`, width: 1536, height: 900, mobile: false, scheme: "light" },
+  { name: "signin-desktop", path: "/signin", width: 1536, height: 900, mobile: false, scheme: "light" },
+  { name: "signin-mobile-dark", path: "/signin", width: 390, height: 844, mobile: true, scheme: "dark" },
   { name: "health-desktop", path: "/health", width: 1536, height: 900, mobile: false, scheme: "light" },
 ] as const;
 

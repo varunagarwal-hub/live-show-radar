@@ -29,6 +29,8 @@ function Equalizer() {
 
 export function DesktopNav() {
   const path = usePathname();
+  // Signed out there is nowhere to go yet: the sign-in page stands alone.
+  if (path.startsWith("/signin")) return null;
   return (
     <nav aria-label="Main">
       {DESKTOP.map((l) => (
@@ -43,6 +45,7 @@ export function DesktopNav() {
 
 export function BottomNav() {
   const path = usePathname();
+  if (path.startsWith("/signin")) return null;
   return (
     <nav className="bottom-nav" aria-label="Main">
       {LINKS.map((l) => (

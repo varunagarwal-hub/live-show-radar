@@ -66,11 +66,11 @@ describe("dry-run poll cycle", () => {
     const loud = tg.messages.filter((m) => !m.silent);
     const quiet = tg.messages.filter((m) => m.silent);
     expect(loud.filter((m) => m.html.includes("Prateek Kuhad"))).toHaveLength(1);
-    expect(loud.find((m) => m.html.includes("Prateek Kuhad"))!.html).toMatch(/^🔴 <b>Prateek Kuhad<\/b> · tier A/);
+    expect(loud.find((m) => m.html.includes("Prateek Kuhad"))!.html).toMatch(/^🔴 <b>NEW SHOW<\/b>[^\n]*\n\n🎤 <b>Prateek Kuhad<\/b> ★/);
     expect(loud.find((m) => m.html.includes("Prateek Kuhad"))!.html).toContain("Early-bird ends Fri 11:59 PM");
     expect(loud.filter((m) => m.html.includes("When Chai Met Toast"))).toHaveLength(1);
     expect(quiet).toHaveLength(1);
-    expect(quiet[0]!.html).toContain("Possible show, please check");
+    expect(quiet[0]!.html).toContain("POSSIBLE SHOW");
     expect(tg.messages.every((m) => m.chatId === "TEST_CHAT")).toBe(true);
     const al = await h.db.select().from(alerts);
     expect(al.every((a) => a.dryRun)).toBe(true);

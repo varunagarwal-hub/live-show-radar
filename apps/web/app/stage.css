@@ -951,3 +951,330 @@
   background: var(--blue);
   rotate: 45deg;
 }
+
+/* ---------- sign-in: the backstage door ---------- */
+
+.signin.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  max-width: none;
+  min-height: calc(100dvh - 140px);
+  margin-top: 14px;
+  gap: 0;
+}
+.si-copy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 16px;
+  align-content: center;
+  padding: 32px var(--gutter) 24px;
+}
+.si-title {
+  font-size: clamp(3.2rem, 15vw, 7.5rem);
+  margin: 0;
+}
+.si-door {
+  font-family: var(--display);
+  font-weight: 800;
+  background: var(--pink);
+  color: #1b2745;
+  padding: 1px 8px;
+  rotate: -2deg;
+  display: inline-block;
+}
+.si-error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 2px dashed var(--pink);
+  font-weight: 500;
+}
+.si-small {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+.si-btn {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  min-height: 60px;
+}
+.si-btn .tb-main {
+  font-size: 1.6rem;
+}
+.si-scene {
+  position: relative;
+  min-height: 330px;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+}
+.bp-rig {
+  position: relative;
+  z-index: 1;
+  width: 220px;
+}
+.bp-swing {
+  display: grid;
+  justify-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+.bp-swing:active {
+  cursor: grabbing;
+}
+.bp-lanyard {
+  width: 120px;
+  height: 120px;
+  margin-bottom: -14px;
+  fill: none;
+  stroke: var(--pink);
+  stroke-width: 9;
+}
+.bp-lanyard rect {
+  fill: #9aa3b5;
+  stroke: none;
+}
+.bp-card {
+  position: relative;
+  width: 210px;
+  background: var(--object);
+  color: #1b2745;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0 #1b2745;
+  border: 2px solid #1b2745;
+}
+.bp-hole {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 34px;
+  height: 7px;
+  margin-left: -17px;
+  border-radius: 4px;
+  background: #1b2745;
+}
+.bp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  padding: 26px 14px 8px;
+  background: var(--pink);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.7rem;
+  text-transform: uppercase;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+}
+.bp-star {
+  font-size: 1.2rem;
+}
+.bp-body {
+  padding: 10px 14px 6px;
+}
+.bp-label {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.bp-name {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 2.3rem;
+  line-height: 1;
+}
+.bp-grid {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.78rem;
+}
+.bp-grid div {
+  display: flex;
+  gap: 8px;
+}
+.bp-grid dt {
+  font-weight: 700;
+  min-width: 42px;
+}
+.bp-grid dd {
+  margin: 0;
+}
+.bp-holo {
+  height: 12px;
+  margin: 8px 14px 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ff48b0, #ffe800, #3aa6ee, #ff48b0, #ffe800, #3aa6ee) 0 0 / 200% 100%;
+  opacity: 0.85;
+}
+.bp-code {
+  display: flex;
+  gap: 2px;
+  height: 30px;
+  margin: 8px 14px 12px;
+}
+.bp-code i {
+  display: block;
+  background: #1b2745;
+}
+@media (min-width: 760px) {
+  .signin.stage {
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+    min-height: 580px;
+  }
+  .si-copy {
+    padding: 56px 48px;
+  }
+  .si-scene {
+    min-height: 580px;
+    align-content: start;
+  }
+  .bp-rig {
+    width: 260px;
+  }
+  .bp-card {
+    width: 240px;
+  }
+}
+
+/* ---------- effects: sparks, confetti, page sweep ---------- */
+
+#fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fx-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+}
+.fx-confetti {
+  position: absolute;
+  background: var(--c);
+}
+.fx-confetti.stub {
+  width: 14px;
+  height: 8px;
+  margin: -4px 0 0 -7px;
+  border-radius: 1px;
+  mask: radial-gradient(circle 2.5px at 0 50%, #0000 96%, #000) left / 51% 100% no-repeat, radial-gradient(circle 2.5px at 100% 50%, #0000 96%, #000) right / 51% 100% no-repeat;
+}
+.fx-confetti.star {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.fx-confetti.dot {
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+}
+.page-sweep {
+  position: fixed;
+  z-index: 55;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60vw;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(100deg, transparent 0 20%, color-mix(in srgb, var(--blue) 30%, transparent) 38%, color-mix(in srgb, var(--pink) 35%, transparent) 55%, transparent 75%);
+  mix-blend-mode: var(--spot-blend);
+  filter: blur(6px);
+}
+
+/* ---------- the stage on phones: the artist's photo, printed and taped on ---------- */
+
+@media (max-width: 759px) {
+  .stage-art {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    top: 18px;
+    right: 14px;
+    width: clamp(96px, 30vw, 132px);
+    aspect-ratio: 1;
+    rotate: 4deg;
+    border: 4px solid var(--object);
+    box-shadow: 3px 3px 0 #1b2745;
+    overflow: visible;
+  }
+  .stage-art::before {
+    /* a strip of tape holding the print */
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: -10px;
+    left: 50%;
+    width: 46px;
+    height: 16px;
+    margin-left: -23px;
+    rotate: -6deg;
+    background: color-mix(in srgb, var(--bulb) 70%, transparent);
+  }
+  .stage-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* leave room on the right of the kicker and name for the print */
+  .stage .stage-kicker,
+  .stage .poster-artist {
+    padding-right: clamp(100px, 32vw, 140px);
+  }
+  .stage .poster-artist {
+    margin-top: 14px;
+  }
+}
+
+/* Phones: the pass hangs above the headline, smaller, so it's seen before scrolling. */
+@media (max-width: 759px) {
+  .si-scene {
+    order: -1;
+    min-height: 270px;
+  }
+  .bp-lanyard {
+    width: 80px;
+    height: 80px;
+  }
+  .bp-rig {
+    width: 190px;
+  }
+  .bp-card {
+    width: 180px;
+  }
+  .bp-head {
+    font-size: 1.4rem;
+    padding-top: 22px;
+  }
+  .bp-name {
+    font-size: 1.8rem;
+  }
+  .si-copy {
+    padding-top: 8px;
+  }
+}
+.signin .si-copy {
+  padding-bottom: 120px;
+}
+@media (min-width: 760px) {
+  .signin .si-copy {
+    padding-bottom: 150px;
+  }
+}

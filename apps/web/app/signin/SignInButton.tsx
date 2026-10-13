@@ -2,10 +2,12 @@
 
 import { signIn } from "next-auth/react";
 
+/** Styled as the gig ticket from the stage: tear here to get in. */
 export function SignInButton() {
   return (
-    <button className="btn solid" onClick={() => signIn("google", { callbackUrl: "/" })}>
-      Sign in with Google
+    <button type="button" className="act ticket-btn si-btn" onClick={() => signIn("google", { callbackUrl: "/" })}>
+      <span className="tb-main">Get in</span>
+      <span className="tb-sub">Sign in with Google</span>
     </button>
   );
 }

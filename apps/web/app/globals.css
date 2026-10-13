@@ -925,13 +925,6 @@ label.small {
   outline: 1.5px solid var(--ink);
 }
 
-.signin {
-  min-height: 80dvh;
-  display: grid;
-  align-content: center;
-  gap: 18px;
-  max-width: 520px;
-}
 
 /* Display optical size: the poster cut of Big Shoulders. */
 .poster-artist, .flyer-month, .wordmark, .stub-artist, .act-name, .section-title, .tear-count { font-variation-settings: "opsz" 72; }

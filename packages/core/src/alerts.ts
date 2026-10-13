@@ -11,6 +11,7 @@ export interface SendOnceInput {
   html: string;
   keyboard?: InlineKeyboard;
   silent?: boolean;
+  photo?: string | null;
   dryRun: boolean;
 }
 
@@ -28,7 +29,7 @@ export async function sendOnce(h: DbHandle, tg: TelegramSink, a: SendOnceInput):
   const id = claimed[0]?.id;
   if (id === undefined) return "duplicate";
   try {
-    const { messageId } = await tg.sendMessage(a.chatId, a.html, { keyboard: a.keyboard, silent: a.silent });
+    const { messageId } = await tg.sendMessage(a.chatId, a.html, { keyboard: a.keyboard, silent: a.silent, photo: a.photo });
     await h.db.update(alerts).set({ telegramMessageId: messageId }).where(eq(alerts.id, id));
     return "sent";
   } catch (err) {
