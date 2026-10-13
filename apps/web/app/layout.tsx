@@ -63,7 +63,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </svg>
         <div className="frame">
           <header className="masthead">
-            <Logo sub={`Bengaluru & beyond · ${mastheadDate()}`} />
+            {/* Their home city once signed in; before that, the whole country. */}
+            <Logo sub={`${viewer ? `${viewer.homeCity} & beyond` : "Live in India"} · ${mastheadDate()}`} />
             <DesktopNav isOwner={viewer?.isOwner ?? false} />
             <div className="masthead-tools">
               <ThemeToggle />

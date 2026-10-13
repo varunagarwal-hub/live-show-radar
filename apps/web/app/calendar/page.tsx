@@ -66,7 +66,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           </Link>
         </nav>
         <p className="lede">
-          <span className="city-code home">BLR</span> blue ink is Bengaluru · <span className="city-code away">AWAY</span> dotted ink is elsewhere
+          <span className="city-code home">{cityCode(v.homeCity)}</span> blue ink is {v.homeCity} · <span className="city-code away">AWAY</span> dotted ink is elsewhere
         </p>
       </header>
 
