@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { Draggable, gsap, prefersReducedMotion } from "@/components/motion";
 
 /**
- * The sign-in scene: an all-access pass on a lanyard drops in from the rig, swings and settles.
+ * The sign-in scene: an Early Access pass on a lanyard drops in from the rig, swings and settles.
  * Grab it and it swings from the strap; let go and it sways back. Spotlights sweep the room, and
  * the hologram strip shimmers. Static (and still fully usable) under reduced motion.
  */
@@ -87,7 +87,7 @@ export function BackstagePass() {
           <div className="bp-card">
             <div className="bp-hole" />
             <div className="bp-head">
-              <span>All access</span>
+              <span>Early access</span>
               <span className="bp-star">★</span>
             </div>
             <div className="bp-body">

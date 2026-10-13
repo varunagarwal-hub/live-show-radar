@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { gsap, prefersReducedMotion } from "./motion";
 
 const LINKS = [
   { href: "/", label: "Next up", icon: "M4 20V9l8-5 8 5v11h-5v-6H9v6z" },
@@ -12,7 +13,11 @@ const LINKS = [
   { href: "/list", label: "List", icon: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" },
   { href: "/more", label: "More", icon: "M5 12h.01M12 12h.01M19 12h.01" },
 ];
-const DESKTOP = [...LINKS.slice(0, 4), { href: "/artists", label: "Artists", icon: "" }, { href: "/health", label: "Health", icon: "" }];
+const DESKTOP = LINKS.slice(0, 4);
+const MORE = [
+  { href: "/artists", label: "Artists", note: "Watchlist, tiers, handles" },
+  { href: "/health", label: "Health", note: "Sources and jobs" },
+];
 
 const isCurrent = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href) || (href === "/more" && (path.startsWith("/artists") || path.startsWith("/health"))));
 
@@ -34,12 +39,58 @@ export function DesktopNav() {
   return (
     <nav aria-label="Main">
       {DESKTOP.map((l) => (
-        <Link key={l.href} href={l.href} aria-current={isCurrent(path, l.href) && l.href !== "/more" ? "page" : undefined}>
-          {isCurrent(path, l.href) && l.href !== "/more" && <Equalizer />}
+        <Link key={l.href} href={l.href} aria-current={isCurrent(path, l.href) ? "page" : undefined}>
+          {isCurrent(path, l.href) && <Equalizer />}
           {l.label}
         </Link>
       ))}
+      <MoreMenu path={path} />
     </nav>
+  );
+}
+
+/** "More ▾" in the desktop nav: Artists and Health in a small drop-down set list. */
+function MoreMenu({ path }: { path: string }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const active = MORE.some((m) => path.startsWith(m.href));
+
+  useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    if (menu.current && !prefersReducedMotion()) {
+      gsap.fromTo(menu.current, { y: -8, opacity: 0, rotate: -2 }, { y: 0, opacity: 1, rotate: 0, duration: 0.28, ease: "back.out(2)" });
+      gsap.fromTo(menu.current.querySelectorAll("a"), { x: -10, opacity: 0 }, { x: 0, opacity: 1, duration: 0.25, stagger: 0.05, delay: 0.05 });
+    }
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrap} className="more-menu">
+      <button type="button" className="more-trigger" aria-expanded={open} aria-haspopup="true" aria-current={active ? "page" : undefined} onClick={() => setOpen((o) => !o)}>
+        {active && <Equalizer />}
+        More <span className="caret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div ref={menu} className="more-panel">
+          {MORE.map((m) => (
+            <Link key={m.href} href={m.href} aria-current={path.startsWith(m.href) ? "page" : undefined}>
+              <b>{m.label}</b>
+              <small>{m.note}</small>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

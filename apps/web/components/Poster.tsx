@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { ShowCard } from "@/lib/data";
 import { cityCode, daysToGo, stubDate } from "@/lib/format";
-import { BoardingPassButton, CassetteButton, TicketButton, WristbandButton } from "./ActionButtons";
+import { BoardingPassButton, CassetteButton, InstagramButton, TicketButton, WristbandButton } from "./ActionButtons";
 import { gsap, prefersReducedMotion } from "./motion";
 import { SplitFlap } from "./SplitFlap";
 
@@ -54,7 +54,13 @@ export function Poster({ show, kicker = "Your next show", sameDay = false }: { s
         .to(".spot-r", { rotate: -6, duration: 1.4, ease: "sine.inOut" }, 1.15)
         .from(".pa-word", { yPercent: 110, duration: 0.7, stagger: 0.08 }, 0.25)
         .from(".crowd", { yPercent: 40, opacity: 0, duration: 0.9 }, 0.2)
-        .from(".stage-meta > *", { y: 14, opacity: 0, duration: 0.45, stagger: 0.06 }, 0.6);
+        .from(".stage-meta > *", { y: 14, opacity: 0, duration: 0.45, stagger: 0.06 }, 0.6)
+        // The photo: a camera flash, then the print develops from grey into colour.
+        .fromTo(".art-flash", { opacity: 0.95 }, { opacity: 0, duration: 0.7, ease: "power2.out" }, 0.35)
+        .fromTo(".stage-art img", { filter: "grayscale(1) contrast(1.4) brightness(1.3)" }, { filter: "grayscale(0) contrast(1.08) brightness(1)", duration: 1.6, ease: "power2.out" }, 0.4)
+        .from(".stage-art", { rotate: -12, scale: 0.86, opacity: 0, duration: 0.7, ease: "back.out(1.6)" }, 0.3);
+      // A slow push-in on the photo while it holds the stage.
+      gsap.fromTo(".stage-art img", { scale: 1.12 }, { scale: 1, duration: 9, ease: "sine.out" });
       // The lights keep breathing gently, like a stage between songs.
       gsap.to(".spot-l", { rotate: 10, duration: 4, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2.6 });
       gsap.to(".spot-r", { rotate: -10, duration: 4.6, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2.7 });
@@ -96,6 +102,7 @@ export function Poster({ show, kicker = "Your next show", sameDay = false }: { s
             {show.playlistUrl && <CassetteButton href={show.playlistUrl} />}
             {show.bioUrl && !show.ticketUrl && <WristbandButton href={show.bioUrl} label="Artist's links" />}
             {show.flightsUrl && show.flightRoute && <BoardingPassButton href={show.flightsUrl} from={show.flightRoute.from} to={show.flightRoute.to} />}
+            {show.instagramUrl && show.instagramHandle && <InstagramButton href={show.instagramUrl} handle={show.instagramHandle} />}
           </div>
           {!show.playlistUrl && <p className="stage-note">Your pre-show playlist is being made.</p>}
         </div>
@@ -103,7 +110,8 @@ export function Poster({ show, kicker = "Your next show", sameDay = false }: { s
       {show.imageUrl && (
         <div className="stage-art" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={show.imageUrl} alt="" style={{ filter: `url(#${show.isHome ? "duo-home" : "duo-away"})` }} />
+          <img src={show.imageUrl} alt="" />
+          <i className="art-flash" />
         </div>
       )}
       <Crowd />

@@ -41,33 +41,36 @@ export function spark(x: number, y: number) {
 }
 
 /** Confetti cannon: ticket stubs, stars and dots arc up and tumble down. For "Going". */
-export function confetti(x: number, y: number, count = 42) {
+export function confetti(x: number, y: number, count = 90) {
   if (prefersReducedMotion()) return;
   const host = layer();
   for (let i = 0; i < count; i++) {
     const d = document.createElement("i");
     const shape = i % 3;
-    d.className = `fx-confetti ${shape === 0 ? "stub" : shape === 1 ? "star" : "dot"}`;
+    d.className = `fx-confetti ${shape === 0 ? "fx-c-stub" : shape === 1 ? "fx-c-star" : "fx-c-dot"}`;
     d.style.left = `${x}px`;
     d.style.top = `${y}px`;
     d.style.setProperty("--c", INKS[i % INKS.length]!);
     host.appendChild(d);
-    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.9;
-    const v = 140 + Math.random() * 220;
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+    const v = 260 + Math.random() * 380;
+    gsap.set(d, { scale: 0.8 + Math.random() * 0.9 });
     const dx = Math.cos(angle) * v;
     const up = Math.sin(angle) * v;
     const tl = gsap.timeline({ onComplete: () => d.remove() });
-    tl.to(d, { x: dx * 0.6, y: up, rotation: (Math.random() - 0.5) * 360, duration: 0.5, ease: "power2.out" })
-      .to(d, { x: dx, y: up + 260 + Math.random() * 160, rotation: `+=${(Math.random() - 0.5) * 540}`, duration: 1.1 + Math.random() * 0.5, ease: "power1.in" })
-      .to(d, { opacity: 0, duration: 0.3 }, "-=0.3");
+    tl.to(d, { x: dx * 0.6, y: up, rotation: (Math.random() - 0.5) * 360, duration: 0.55, ease: "power2.out" })
+      .to(d, { x: dx * (1.2 + Math.random() * 0.4), y: up + 420 + Math.random() * 320, rotation: `+=${(Math.random() - 0.5) * 720}`, rotationX: `+=${360 + Math.random() * 360}`, duration: 1.6 + Math.random() * 0.8, ease: "power1.in" })
+      .to(d, { opacity: 0, duration: 0.4 }, "-=0.4");
   }
 }
 
-/** Fires confetti from the middle of an element (the stub that was just admitted). */
+/** Fires confetti from the button just pressed, else from the middle of the element (the stub). */
 export function confettiFrom(el: Element | null) {
-  if (!el) return;
-  const r = el.getBoundingClientRect();
-  confetti(r.left + r.width / 2, r.top + r.height / 3);
+  const pressed = document.activeElement;
+  const origin = pressed instanceof HTMLElement && pressed !== document.body && el?.contains(pressed) ? pressed : el;
+  if (!origin) return;
+  const r = origin.getBoundingClientRect();
+  confetti(r.left + r.width / 2, r.top + r.height / 2);
 }
 
 let firstPage = true;

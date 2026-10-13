@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
-import Link from "next/link";
 import { BottomNav, DesktopNav, SignOutButton, ThemeToggle } from "@/components/Chrome";
 import { Effects } from "@/components/Effects";
+import { Logo } from "@/components/Logo";
 import { mastheadDate } from "@/lib/format";
 import "./globals.css";
 import "./stage.css";
@@ -61,18 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </svg>
         <div className="frame">
           <header className="masthead">
-            <Link href="/" className="wordmark" aria-label="Early Access, home">
-              <svg className="logo-mark" viewBox="0 0 48 32" aria-hidden="true">
-                {/* a ticket stub: notched sides, perforation, admit-one star */}
-                <path d="M4 2h40a2 2 0 0 1 2 2v7a5 5 0 0 0 0 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a5 5 0 0 0 0-10V4a2 2 0 0 1 2-2z" />
-                <path className="logo-perf" d="M33 6v20" />
-                <path className="logo-star" d="M17 9l2.1 4.4 4.8.6-3.5 3.3.9 4.7-4.3-2.3-4.3 2.3.9-4.7-3.5-3.3 4.8-.6z" />
-              </svg>
-              <span className="logo-text">
-                Early Access
-                <small suppressHydrationWarning>Bengaluru &amp; beyond · {mastheadDate()}</small>
-              </span>
-            </Link>
+            <Logo sub={`Bengaluru & beyond · ${mastheadDate()}`} />
             <DesktopNav />
             <div className="masthead-tools">
               <ThemeToggle />

@@ -61,3 +61,19 @@ export function WristbandButton({ href, label }: { href: string; label: string }
     </a>
   );
 }
+
+/** A photo pass for the artist's Instagram: a small camera and their handle. */
+export function InstagramButton({ href, handle }: { href: string; handle: string }) {
+  return (
+    <a className="act insta-btn" href={href} {...ext} aria-label={`${handle} on Instagram`}>
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="insta-cam">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4.2" />
+        <circle cx="17.2" cy="6.8" r="1" className="dot" />
+      </svg>
+      <span className="act-text">
+        <span className="act-kicker">Photo pass</span>@{handle}
+      </span>
+    </a>
+  );
+}

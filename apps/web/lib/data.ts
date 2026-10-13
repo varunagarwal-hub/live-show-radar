@@ -13,6 +13,9 @@ export interface ShowCard {
   artistName: string;
   priorityTier: "A" | "B" | "C";
   imageUrl: string | null;
+  /** The artist's Instagram page, only for handles Karan confirmed. */
+  instagramUrl: string | null;
+  instagramHandle: string | null;
   city: string;
   isHome: boolean;
   venue: string | null;
@@ -118,6 +121,8 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       artistName: a.name,
       priorityTier: a.priorityTier,
       imageUrl: a.imageUrl,
+      instagramHandle: a.handleStatus === "confirmed" ? a.instagramHandle : null,
+      instagramUrl: a.handleStatus === "confirmed" && a.instagramHandle ? `https://www.instagram.com/${a.instagramHandle}/` : null,
       city: e.city,
       isHome: isHomeCity(e.city),
       venue: e.venue,

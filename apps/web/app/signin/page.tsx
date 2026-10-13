@@ -24,7 +24,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
             </span>
           ))}
         </h1>
-        <p className="poster-meta si-rise">This radar belongs to one person. Show your pass: sign in with the Google account it was set up for.</p>
+        <p className="poster-meta si-rise">One name on this guest list, and the bouncer knows your face. Flash your Google pass and head straight for the barricade.</p>
         {error && (
           <p role="alert" className="si-rise si-error">
             That account isn&rsquo;t on the list. Only the email in ALLOWED_EMAIL can get in.

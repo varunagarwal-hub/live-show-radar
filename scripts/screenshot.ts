@@ -53,6 +53,7 @@ const shots = [
   { name: "calendar-desktop", path: `/calendar?m=${new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 7)}`, width: 1536, height: 900, mobile: false, scheme: "light" },
   { name: "signin-desktop", path: "/signin", width: 1536, height: 900, mobile: false, scheme: "light" },
   { name: "signin-mobile-dark", path: "/signin", width: 390, height: 844, mobile: true, scheme: "dark" },
+  { name: "home-desktop-more", path: "/", width: 1536, height: 900, mobile: false, scheme: "light", click: ".more-trigger" },
   { name: "health-desktop", path: "/health", width: 1536, height: 900, mobile: false, scheme: "light" },
 ] as const;
 
@@ -62,6 +63,10 @@ for (const s of shots) {
   await send("Page.enable");
   await send("Page.navigate", { url: base + s.path });
   await sleep(4000);
+  if ("click" in s && s.click) {
+    await send("Runtime.evaluate", { expression: `document.querySelector(${JSON.stringify(s.click)}).click()` });
+    await sleep(800);
+  }
   const { data } = await send<{ data: string }>("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   writeFileSync(join(out, `${s.name}.png`), Buffer.from(data, "base64"));
   console.log(`saved docs/screenshots/${s.name}.png`);

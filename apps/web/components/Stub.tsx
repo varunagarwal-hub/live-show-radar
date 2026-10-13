@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { ShowCard } from "@/lib/data";
 import { decideAction } from "@/lib/actions";
 import { cityCode, DEADLINE_LABEL, formatPrice, shortWhen, stubDate } from "@/lib/format";
-import { BoardingPassButton, CassetteButton, TicketButton, WristbandButton } from "./ActionButtons";
+import { BoardingPassButton, CassetteButton, InstagramButton, TicketButton, WristbandButton } from "./ActionButtons";
 import { Countdown } from "./Countdown";
 import { confettiFrom } from "./Effects";
 import { Draggable, gsap } from "./motion";
@@ -143,6 +143,7 @@ export function Stub({ show, mini = false, emphasis }: { show: ShowCard; mini?: 
               {show.bioUrl && !show.ticketUrl && <WristbandButton href={show.bioUrl} label="Artist's links" />}
               {decision === "going" && show.playlistUrl && <CassetteButton href={show.playlistUrl} />}
               {show.flightsUrl && show.flightRoute && <BoardingPassButton href={show.flightsUrl} from={show.flightRoute.from} to={show.flightRoute.to} />}
+              {show.instagramUrl && show.instagramHandle && <InstagramButton href={show.instagramUrl} handle={show.instagramHandle} />}
             </div>
           </>
         )}

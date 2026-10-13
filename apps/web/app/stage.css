@@ -699,8 +699,23 @@
   height: auto;
   rotate: -6deg;
 }
-.logo-mark path:first-child {
+.logo-body {
   fill: var(--pink);
+}
+.logo-glint {
+  fill: #fff;
+}
+.logo-name {
+  display: block;
+}
+.logo-clip {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.04em;
+}
+.logo-letter {
+  display: inline-block;
 }
 .logo-perf {
   fill: none;
@@ -1156,32 +1171,35 @@
 }
 .fx-spark {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
   border-radius: 50%;
 }
 .fx-confetti {
   position: absolute;
   background: var(--c);
 }
-.fx-confetti.stub {
-  width: 14px;
-  height: 8px;
-  margin: -4px 0 0 -7px;
-  border-radius: 1px;
-  mask: radial-gradient(circle 2.5px at 0 50%, #0000 96%, #000) left / 51% 100% no-repeat, radial-gradient(circle 2.5px at 100% 50%, #0000 96%, #000) right / 51% 100% no-repeat;
+.fx-confetti {
+  box-shadow: 0 0 0 1px rgb(27 39 69 / 0.25);
 }
-.fx-confetti.star {
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
+.fx-confetti.fx-c-stub {
+  width: 24px;
+  height: 13px;
+  margin: -6px 0 0 -12px;
+  border-radius: 1px;
+  mask: radial-gradient(circle 4px at 0 50%, #0000 96%, #000) left / 51% 100% no-repeat, radial-gradient(circle 4px at 100% 50%, #0000 96%, #000) right / 51% 100% no-repeat;
+}
+.fx-confetti.fx-c-star {
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
   clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
-.fx-confetti.dot {
-  width: 7px;
-  height: 7px;
-  margin: -3.5px 0 0 -3.5px;
+.fx-confetti.fx-c-dot {
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
   border-radius: 50%;
 }
 .page-sweep {
@@ -1277,4 +1295,177 @@
   .signin .si-copy {
     padding-bottom: 150px;
   }
+}
+
+/* ---------- the artist photo on the stage: a colour print, not a duotone ---------- */
+
+.stage-art {
+  background: var(--object);
+  border: 6px solid var(--object);
+  box-shadow: 7px 7px 0 var(--pink), 7px 7px 0 2px #1b2745;
+  isolation: isolate;
+}
+.stage.away .stage-art {
+  box-shadow: 7px 7px 0 var(--blue), 7px 7px 0 2px #1b2745;
+}
+.stage-art img {
+  display: block;
+  filter: contrast(1.08) saturate(1.12);
+}
+.stage-art::after {
+  /* a light stage gel and a fine print halftone over the photo */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(rgb(27 39 69 / 0.22) 0.8px, transparent 1.1px) 0 0 / 4px 4px,
+    linear-gradient(160deg, color-mix(in srgb, var(--pink) 28%, transparent), transparent 45%, color-mix(in srgb, var(--blue) 26%, transparent));
+  mix-blend-mode: soft-light;
+}
+.art-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (min-width: 760px) {
+  .stage-art {
+    rotate: 2deg;
+  }
+}
+@media (max-width: 759px) {
+  .stage-art {
+    border-width: 4px;
+    box-shadow: 4px 4px 0 var(--pink), 4px 4px 0 2px #1b2745;
+  }
+}
+
+/* ---------- the artist's Instagram: a photo pass ---------- */
+
+.insta-btn {
+  background: var(--object);
+  color: #1b2745;
+  padding: 6px 14px 6px 10px;
+  border: 2px solid #1b2745;
+  border-radius: 999px;
+  box-shadow: 3px 3px 0 var(--pink);
+}
+.insta-cam {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--pink);
+  stroke-width: 2.2;
+}
+.insta-cam .dot {
+  fill: var(--pink);
+  stroke: none;
+}
+.insta-btn:hover .insta-cam {
+  animation: shutter 0.35s ease-out;
+}
+@keyframes shutter {
+  40% {
+    transform: scale(0.82);
+  }
+}
+
+/* ---------- desktop nav: More ▾ ---------- */
+
+.more-menu {
+  position: relative;
+}
+.more-trigger {
+  font: inherit;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+.more-trigger[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-color: var(--pink);
+  text-decoration-thickness: 4px;
+}
+.more-trigger .caret {
+  display: inline-block;
+  font-size: 0.8em;
+  transition: rotate 0.2s ease;
+}
+.more-trigger[aria-expanded="true"] .caret {
+  rotate: 180deg;
+}
+.more-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 10px);
+  right: -10px;
+  min-width: 230px;
+  display: grid;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--pink);
+  padding: 6px;
+  transform-origin: 80% 0;
+}
+.more-panel::before {
+  /* a strip of tape, as if the set list were stuck to the wall */
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 54px;
+  height: 18px;
+  margin-left: -27px;
+  rotate: -4deg;
+  background: color-mix(in srgb, var(--bulb) 70%, transparent);
+}
+.more-panel a {
+  display: grid;
+  gap: 1px;
+  padding: 10px 12px;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--rule);
+}
+.more-panel a:last-child {
+  border-bottom: 0;
+}
+.more-panel a:hover,
+.more-panel a:focus-visible {
+  background: var(--yellow);
+  color: #1b2745;
+}
+.more-panel a[aria-current="page"] b {
+  text-decoration: underline;
+  text-decoration-color: var(--pink);
+  text-decoration-thickness: 3px;
+}
+.more-panel b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+.more-panel small {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+.more-panel a:hover small {
+  opacity: 1;
+}
+/* the masthead's nav-link styles must not leak into the panel */
+.masthead .more-panel a {
+  display: grid;
+  font-family: var(--body);
+  font-size: 1rem;
+  padding: 10px 12px;
+  text-decoration: none;
 }

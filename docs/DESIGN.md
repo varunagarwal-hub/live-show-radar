@@ -212,10 +212,14 @@ Karan asked for something that feels like being at a gig, with motion. This deli
 
 Small additions on top of §11, same inks and type:
 
-- **Sign-in is the backstage door.** An all-access pass on a pink lanyard drops from the rig, swings and settles; grab it and it swings from the strap. Spotlights and the halftone crowd from the stage, and the sign-in button is the yellow gig ticket ("Get in"). Navigation is hidden until you're in.
+- **Sign-in is the backstage door.** An "Early Access" pass on a pink lanyard drops from the rig, swings and settles; grab it and it swings from the strap. Spotlights and the halftone crowd from the stage, and the sign-in button is the yellow gig ticket ("Get in"). Navigation is hidden until you're in.
 - **Between pages,** a pink-and-blue stage light sweeps across while the new page rises in (0.7 s).
 - **Every press** throws a small spark of ink dots; **Going** fires a confetti cannon of ticket stubs and stars from the stub.
 - **Section titles** below the fold rise into place as they scroll in. Titles already on screen never move.
 - **Phones get the artist photo:** on the stage it's a duotone print taped to the top corner instead of being hidden.
 
 All of it is skipped under `prefers-reduced-motion`, and in background tabs.
+- **The logo performs on load:** the ticket stub is flicked in spinning, its perforation is punched, the star pops and the letters rise; every ~9 s it wobbles and a light glints across it.
+- **Artist photos are colour prints,** not duotones (those made some photos pale and blue): a paper border, a pink (or blue, away) misregistered edge, a light halftone and stage gel. Each new show's photo arrives with a camera flash and develops from grey into colour, with a slow push-in.
+- **Photo pass:** a small Instagram pass (camera + @handle) sits with the tickets, playlist and flights for artists whose handle is confirmed.
+- **Desktop nav:** Artists and Health live under "More ▾", a taped-on set list.
