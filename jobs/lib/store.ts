@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
 import {
   computeUrgency,
@@ -21,7 +21,7 @@ import {
   type WatchArtist,
 } from "@radar/core";
 import type { DbHandle } from "@radar/core/db";
-import { artists, events, eventSources, type EventRow } from "@radar/core/db/schema";
+import { alerts, artists, decisions, events, eventSources, type EventRow } from "@radar/core/db/schema";
 import { eventsForArtists } from "@radar/core/db/queries";
 
 export interface StoreContext {
@@ -173,12 +173,25 @@ export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pic
   const sources = await sc.h.db.select({ source: eventSources.source, url: eventSources.url }).from(eventSources).where(eq(eventSources.eventId, row.id));
   const ae = toAlertEvent(row, artist, sources);
   const possible = row.status === "possible";
+  // A "possible" show that is now confirmed gets its one real alert, headed "Now confirmed", unless
+  // Karan has already decided on it from the possible-show note: then it needs no second ping.
+  let upgraded = false;
+  if (!possible) {
+    const [hint] = await sc.h.db.select({ id: alerts.id }).from(alerts).where(and(eq(alerts.dedupKey, `possible:${row.id}`), eq(alerts.dryRun, sc.dryRun))).limit(1);
+    if (hint) {
+      const [decided] = await sc.h.db.select({ s: decisions.status }).from(decisions).where(eq(decisions.eventId, row.id)).limit(1);
+      if (decided) return;
+      upgraded = true;
+    }
+  }
+  const html = formatAlert(ae, sc.now);
   const res = await sendOnce(sc.h, sc.tg, {
     dedupKey: possible ? `possible:${row.id}` : `new:${row.id}`,
     kind: possible ? "possible_show" : "new_event",
     eventId: row.id,
     chatId: sc.chatId,
-    html: formatAlert(ae, sc.now),
+    html: upgraded ? `✅ <b>Now confirmed</b>
+${html}` : html,
     keyboard: eventKeyboard(row.id, { compact: possible }),
     silent: possible,
     dryRun: sc.dryRun,

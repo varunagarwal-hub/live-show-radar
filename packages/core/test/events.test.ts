@@ -89,3 +89,35 @@ describe("mergeEvent", () => {
     expect(mergeEvent(existing(), fields(), "news", now).changed).toBe(false);
   });
 });
+
+describe("findExisting: duplicates seen in October 2026 (Diljit Dosanjh, Delhi)", () => {
+  const delhi = (id: number, date: string | null, venue: string | null = "JLN Stadium") =>
+    ({ ...existing({ city: "Delhi NCR", date, venue }), id, fingerprint: fingerprint(7, "Delhi NCR", date) }) as ExistingEvent;
+
+  it("an undated report joins the soonest known show in that city, even when there are several", () => {
+    const a = delhi(1, "2026-10-30");
+    const b = delhi(2, "2026-12-20");
+    expect(findExisting({ artistId: 7, city: "New Delhi", date: null }, [b, a])).toBe(a);
+  });
+
+  it("an undated report prefers an undated event", () => {
+    const a = delhi(1, "2026-10-30");
+    const u = delhi(2, null);
+    expect(findExisting({ artistId: 7, city: "Delhi", date: null }, [a, u])).toBe(u);
+  });
+
+  it("a city-TBA report joins the artist's one show on that date", () => {
+    const a = delhi(1, "2026-11-01");
+    expect(findExisting({ artistId: 7, city: "TBA", date: "2026-11-01" }, [a])).toBe(a);
+    expect(findExisting({ artistId: 7, city: "TBA", date: "2026-11-02" }, [a])).toBeUndefined();
+    expect(findExisting({ artistId: 7, city: "TBA", date: null }, [a])).toBeUndefined();
+  });
+
+  it("a rescheduled date joins the same show; a second night without that wording stays separate", () => {
+    const a = delhi(1, "2026-11-01");
+    expect(findExisting({ artistId: 7, city: "Delhi NCR", date: "2026-10-30", venue: "JLN Stadium", evidence: "Diljit reschedules Delhi concert to Oct 30" }, [a])).toBe(a);
+    expect(findExisting({ artistId: 7, city: "Delhi NCR", date: "2026-11-02", venue: "JLN Stadium", evidence: "Second show added in Delhi!" }, [a])).toBeUndefined();
+    // A different venue is a different show.
+    expect(findExisting({ artistId: 7, city: "Delhi NCR", date: "2026-10-30", venue: "Kingdom of Dreams", evidence: "rescheduled" }, [a])).toBeUndefined();
+  });
+});

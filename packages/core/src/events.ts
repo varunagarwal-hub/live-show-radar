@@ -32,17 +32,44 @@ export interface ExistingEvent extends EventFields {
   fieldHistory: FieldChange[];
 }
 
+const RESCHEDULED = /\b(reschedul\w*|postpone\w*|prepone\w*|new date|date (change|shift)\w*|moved to|shifted to|now on)\b/i;
+const DAY = 86_400_000;
+const daysApart = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / DAY;
+
 /**
- * Finds the event an incoming candidate belongs to: same fingerprint, or an undated event for the
- * same artist and city when the candidate brings a date (and vice versa).
+ * Finds the event an incoming candidate belongs to, in this order:
+ * 1. Same fingerprint (artist, city, date).
+ * 2. Dated candidate: an undated event for the same artist and city; or, when the source says the
+ *    show was rescheduled, the same artist, city and venue within a week (the date then changes
+ *    through mergeEvent and is recorded in field_history).
+ * 3. Undated candidate: the undated event for that artist and city, else their soonest dated one
+ *    ("Diljit's Delhi concert" news is about the show already known).
+ * 4. City not known ("TBA") but dated: that artist's one event on that date.
  */
-export function findExisting<E extends ExistingEvent>(incoming: Pick<EventFields, "artistId" | "city" | "date">, existing: E[]): E | undefined {
+export function findExisting<E extends ExistingEvent>(incoming: Pick<EventFields, "artistId" | "city" | "date"> & Partial<Pick<EventFields, "venue" | "title" | "evidence">>, existing: E[]): E | undefined {
   const fp = fingerprint(incoming.artistId, incoming.city, incoming.date);
   const exact = existing.find((e) => e.fingerprint === fp);
   if (exact) return exact;
-  const sameArtistCity = existing.filter((e) => e.artistId === incoming.artistId && normalizeCity(e.city) === normalizeCity(incoming.city));
-  if (incoming.date) return sameArtistCity.find((e) => e.date === null);
-  return sameArtistCity.length === 1 ? sameArtistCity[0] : undefined;
+  const artist = existing.filter((e) => e.artistId === incoming.artistId);
+  if (incoming.city === "TBA") {
+    if (!incoming.date) return undefined;
+    const sameDay = artist.filter((e) => e.date === incoming.date);
+    return sameDay.length === 1 ? sameDay[0] : undefined;
+  }
+  const sameCity = artist.filter((e) => normalizeCity(e.city) === normalizeCity(incoming.city));
+  if (incoming.date) {
+    const undated = sameCity.find((e) => e.date === null);
+    if (undated) return undated;
+    if (RESCHEDULED.test(`${incoming.title ?? ""} ${incoming.evidence ?? ""}`)) {
+      const v = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const moved = sameCity.filter((e) => e.date && daysApart(e.date, incoming.date!) <= 7 && (!incoming.venue || !e.venue || v(e.venue) === v(incoming.venue)));
+      if (moved.length === 1) return moved[0];
+    }
+    return undefined;
+  }
+  const undated = sameCity.find((e) => e.date === null);
+  if (undated) return undated;
+  return [...sameCity].filter((e) => e.date).sort((a, b) => a.date!.localeCompare(b.date!))[0];
 }
 
 const sameValue = (a: unknown, b: unknown) =>

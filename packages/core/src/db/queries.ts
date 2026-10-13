@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { DbHandle } from "./index";
 import {
   alerts,
@@ -116,7 +116,7 @@ export async function eventsForArtists(h: DbHandle, artistIds: number[], now = n
   return h.db
     .select()
     .from(events)
-    .where(and(inArray(events.artistId, artistIds), or(gte(events.date, since), isNull(events.date))));
+    .where(and(inArray(events.artistId, artistIds), or(gte(events.date, since), isNull(events.date)), ne(events.status, "cancelled")));
 }
 
 export async function kvGet<T>(h: DbHandle, key: string): Promise<T | null> {
