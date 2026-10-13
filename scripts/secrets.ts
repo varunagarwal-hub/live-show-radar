@@ -2,13 +2,14 @@
  * Manage local secrets without pasting them anywhere else.
  *   pnpm secrets set GEMINI_API_KEY GROQ_API_KEY   prompt (hidden) and save to .env
  *   pnpm secrets generate                          fill the random secrets that are still empty
+ *   pnpm secrets login [username]                  make a username + password for the dashboard
  *   pnpm secrets push [NAME…]                      copy the GitHub-side values from .env to GitHub secrets (gh CLI)
  *   pnpm secrets push-vercel [NAME…]               the same for Vercel; with names, only those keys
  *   pnpm secrets status                            which variables are set (names only)
  * Values are never printed.
  */
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { randomBytes, scryptSync } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -63,6 +64,9 @@ const VERCEL_VARS = [
   "AUTH_GOOGLE_SECRET",
   "RADAR_DRY_RUN",
   "TOKEN_ENC_KEY",
+  // Username + password sign-in to the owner's dashboard (pnpm secrets login).
+  "LOGIN_USERNAME",
+  "LOGIN_PASSWORD_HASH",
 ];
 const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32, TOKEN_ENC_KEY: 32 } as const;
 
@@ -187,6 +191,19 @@ if (cmd === "set" && names.includes("--clipboard")) {
   }
   if (Object.keys(updates).length) writeEnv(updates);
   console.log(`Saved ${Object.keys(updates).length} value(s) to .env.`);
+} else if (cmd === "login") {
+  // Username + password for the owner's dashboard. The password stays in .env (LOGIN_PASSWORD, for
+  // you to share) and is copied to the clipboard; only its scrypt hash goes to Vercel.
+  const username = names.find((n) => /^[a-z0-9._-]{3,32}$/i.test(n)) ?? env.get("LOGIN_USERNAME") ?? "earlyaccess";
+  const abc = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(16);
+  const password = Array.from(bytes, (b) => abc[b % abc.length]).join("").replace(/(.{4})(?!$)/g, "$1-");
+  const salt = randomBytes(16);
+  const hash = scryptSync(password, salt, 32);
+  writeEnv({ LOGIN_USERNAME: username, LOGIN_PASSWORD: password, LOGIN_PASSWORD_HASH: `scrypt$${salt.toString("base64url")}$${hash.toString("base64url")}` });
+  const copied = process.platform === "win32" && spawnSync("clip", { input: password }).status === 0;
+  console.log(`Saved login "${username}" to .env (LOGIN_PASSWORD).${copied ? " The password is on your clipboard." : ""}`);
+  console.log("Next: pnpm secrets push-vercel LOGIN_USERNAME LOGIN_PASSWORD_HASH (then redeploy).");
 } else if (cmd === "generate") {
   const updates: Record<string, string> = {};
   for (const [k, bytes] of Object.entries(RANDOM)) if (!env.get(k)) updates[k] = randomBytes(bytes).toString("base64url");

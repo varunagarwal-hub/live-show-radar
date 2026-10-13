@@ -36,6 +36,9 @@ export const EnvSchema = z.object({
   PUBLIC_BASE_URL: z.string().url(),
   /** Encrypts people's stored Spotify tokens (users.spotify_refresh_enc). */
   TOKEN_ENC_KEY: z.string().min(32).optional(),
+  /** Optional username + password sign-in to the owner's dashboard (hash from pnpm secrets login). */
+  LOGIN_USERNAME: z.string().min(3).optional(),
+  LOGIN_PASSWORD_HASH: z.string().startsWith("scrypt$").optional(),
   RADAR_DRY_RUN: z.string().optional(),
   RADAR_STATE_DIR: z.string().default(".radar-state"),
 });

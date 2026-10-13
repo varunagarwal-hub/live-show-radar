@@ -1612,3 +1612,89 @@
 .privacy .section-title {
   margin-top: 28px;
 }
+
+/* ---------- sign-in: username login and the demo screening ---------- */
+
+.si-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+.si-pw-toggle {
+  font-family: var(--body);
+  font-size: 0.95rem;
+  color: inherit;
+}
+.si-pw {
+  display: grid;
+  gap: 6px;
+  max-width: 340px;
+}
+.si-pw .si-btn {
+  margin-top: 8px;
+  justify-self: start;
+}
+.demo-btn {
+  background: #1b2745;
+  color: var(--bulb);
+  border: 2px solid var(--bulb);
+  padding: 8px 18px 8px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+.demo-btn .act-kicker {
+  color: var(--pink);
+}
+.demo-play {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bulb);
+  color: #1b2745;
+  font-size: 0.9rem;
+  padding-left: 3px;
+}
+.demo-btn:hover .demo-play {
+  animation: shutter 0.35s ease-out;
+}
+.demo-dialog {
+  width: min(1100px, 94vw);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.demo-dialog::backdrop {
+  background: rgb(7 10 20 / 0.86);
+}
+.demo-frame {
+  position: relative;
+  background: #070a14;
+  border: 4px solid var(--object);
+  box-shadow: 8px 8px 0 var(--pink);
+}
+.demo-frame video {
+  display: block;
+  width: 100%;
+  max-height: 80vh;
+  background: #000;
+}
+.demo-close {
+  position: absolute;
+  z-index: 2;
+  top: -18px;
+  right: -18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid #1b2745;
+  background: var(--bulb);
+  color: #1b2745;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}

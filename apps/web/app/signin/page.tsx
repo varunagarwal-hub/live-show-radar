@@ -3,6 +3,10 @@ import { Crowd } from "@/components/Poster";
 import { getViewer, sessionIdentity } from "@/lib/auth";
 import { BackstagePass } from "./BackstagePass";
 import { SignInButton } from "./SignInButton";
+import { DemoVideo } from "./DemoVideo";
+import { PasswordLogin } from "./PasswordLogin";
+import { DEMO_VIDEO } from "@/lib/demo";
+import { passwordLoginEnabled } from "@/lib/password-login";
 
 const HEADLINE = ["Who’s", "on", "the", "list?"];
 
@@ -35,9 +39,15 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
             Google sign-in didn&rsquo;t go through. Give it another go.
           </p>
         )}
-        <div className="si-rise">
+        <div className="si-rise si-actions">
           <SignInButton />
+          {DEMO_VIDEO && <DemoVideo src={DEMO_VIDEO.src} poster={DEMO_VIDEO.poster} />}
         </div>
+        {passwordLoginEnabled() && (
+          <div className="si-rise">
+            <PasswordLogin />
+          </div>
+        )}
         <p className="si-rise si-small">
           Every show your artists announce in India, before the early-birds are gone. Got an invite? Sign in, then enter your code. <a href="/privacy">Privacy</a>
         </p>

@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -10,6 +11,7 @@ import { ensureOwner } from "@radar/core/db/people";
 import { kvGet } from "@radar/core/db/queries";
 import { OWNER_USER_ID, users, type UserRow } from "@radar/core/db/schema";
 import { getDb } from "./db";
+import { checkPasswordLogin } from "./password-login";
 
 const ownerEmail = () => (process.env.ALLOWED_EMAIL ?? "").trim().toLowerCase();
 
@@ -25,11 +27,24 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.AUTH_GOOGLE_SECRET ?? "",
       authorization: { params: { scope: "openid email profile", prompt: "select_account" } },
     }),
+    // Username + password opens the owner's own dashboard, with full access (for a reviewer who
+    // can't use the owner's Google account). Off unless LOGIN_USERNAME / LOGIN_PASSWORD_HASH are set.
+    CredentialsProvider({
+      id: "password",
+      name: "Username and password",
+      credentials: { username: { label: "Username", type: "text" }, password: { label: "Password", type: "password" } },
+      async authorize(c) {
+        if (!c?.username || !c.password || !ownerEmail()) return null;
+        if (!(await checkPasswordLogin(c.username, c.password))) return null;
+        return { id: "owner-password", email: ownerEmail(), name: "Reviewer" };
+      },
+    }),
   ],
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 },
   pages: { signIn: "/signin", error: "/signin" },
   callbacks: {
-    async signIn({ profile, user }) {
+    async signIn({ profile, user, account }) {
+      if (account?.provider === "password") return true; // checked in authorize()
       const email = (profile?.email ?? user.email ?? "").toLowerCase();
       const verified = (profile as { email_verified?: boolean } | undefined)?.email_verified !== false;
       return Boolean(email) && verified;
