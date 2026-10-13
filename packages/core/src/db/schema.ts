@@ -10,7 +10,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
-
+  primaryKey,
   real,
   serial,
   text,
@@ -174,15 +174,21 @@ export const tierSnapshots = pgTable(
   (t) => [index("tier_snapshots_event_idx").on(t.eventId, t.capturedAt)],
 );
 
-export const decisions = pgTable("decisions", {
-  eventId: integer()
-    .primaryKey()
-    .references(() => events.id, { onDelete: "cascade" }),
-  status: decisionStatus().notNull(),
-  decidedAt: ts("decided_at").notNull().defaultNow(),
-  /** "telegram" | "dashboard" */
-  via: text().notNull(),
-});
+export const decisions = pgTable(
+  "decisions",
+  {
+    /** Whose decision; 1 = the owner (every decision before multi-user). */
+    userId: integer().notNull().default(1),
+    eventId: integer()
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    status: decisionStatus().notNull(),
+    decidedAt: ts("decided_at").notNull().defaultNow(),
+    /** "telegram" | "dashboard" */
+    via: text().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.eventId] })],
+);
 
 export const alerts = pgTable(
   "alerts",
@@ -196,6 +202,8 @@ export const alerts = pgTable(
     sentAt: ts("sent_at").notNull().defaultNow(),
     telegramMessageId: integer(),
     dryRun: boolean().notNull().default(false),
+    /** Recipient; 1 = the owner. Other people's dedup keys are prefixed "u<id>:". */
+    userId: integer().notNull().default(1),
   },
   (t) => [uniqueIndex("alerts_dedup_idx").on(t.dedupKey, t.dryRun)],
 );
@@ -272,6 +280,67 @@ export const kv = pgTable("kv", {
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 
+/** People who can sign in. User 1 is the owner (ALLOWED_EMAIL): the original single user. */
+export const userRole = pgEnum("user_role", ["owner", "member"]);
+export const OWNER_USER_ID = 1;
+
+export const users = pgTable("users", {
+  id: serial().primaryKey(),
+  email: text().notNull().unique(),
+  name: text(),
+  role: userRole().notNull().default("member"),
+  /** Shows here count as "home" (no flights); other cities get a flight search from here. */
+  homeCity: text().notNull().default("Bengaluru"),
+  /** Private chat with the bot, set when they tap Start on their connect link. */
+  telegramChatId: text().unique(),
+  /** One-time code in the t.me/<bot>?start=<code> link that connects their chat. */
+  telegramLinkToken: text().unique(),
+  /** Secret path segment of their calendar feed. */
+  calendarToken: text().notNull().unique(),
+  /** AES-GCM encrypted Spotify refresh token (only for people on the Spotify allowlist). */
+  spotifyRefreshEnc: text(),
+  spotifyUserId: text(),
+  spotifySyncedAt: ts("spotify_synced_at"),
+  inviteCode: text(),
+  createdAt: createdAt(),
+  lastSeenAt: ts("last_seen_at"),
+});
+
+/** Invite codes: a code admits up to max_uses new people until it expires or is revoked. */
+export const invites = pgTable("invites", {
+  code: text().primaryKey(),
+  note: text(),
+  maxUses: integer().notNull().default(1),
+  uses: integer().notNull().default(0),
+  expiresAt: ts("expires_at"),
+  revokedAt: ts("revoked_at"),
+  createdAt: createdAt(),
+});
+
+/**
+ * Who follows which artist, with their own tier and mute. artists.muted / priority_tier are the
+ * shared view derived from these rows (see refreshArtistGlobals): an artist is watched while
+ * anyone follows it unmuted. Artists with no rows at all belong to the owner (pre-multi-user data).
+ */
+export const follows = pgTable(
+  "follows",
+  {
+    userId: integer()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    artistId: integer()
+      .notNull()
+      .references(() => artists.id, { onDelete: "cascade" }),
+    tier: priorityTier().notNull().default("B"),
+    muted: boolean().notNull().default(false),
+    /** "owner" | "spotify" | "search" */
+    source: text().notNull().default("search"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.artistId] }), index("follows_artist_idx").on(t.artistId)],
+);
+
+
 export type Artist = typeof artists.$inferSelect;
 export type NewArtist = typeof artists.$inferInsert;
 export type WatchedAccount = typeof watchedAccounts.$inferSelect;
@@ -284,4 +353,6 @@ export type JobRun = typeof jobRuns.$inferSelect;
 export type SourceHealthRow = typeof sourceHealth.$inferSelect;
 export type PlaylistRow = typeof playlists.$inferSelect;
 export type MissRow = typeof misses.$inferSelect;
-
+export type UserRow = typeof users.$inferSelect;
+export type InviteRow = typeof invites.$inferSelect;
+export type FollowRow = typeof follows.$inferSelect;

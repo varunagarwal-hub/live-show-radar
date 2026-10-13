@@ -29,6 +29,13 @@
       "when": 1791827724426,
       "tag": "0003_booking_url",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791870597049,
+      "tag": "0004_multi_user",
+      "breakpoints": true
     }
   ]
 }

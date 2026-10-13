@@ -13,6 +13,8 @@ export interface SendOnceInput {
   silent?: boolean;
   photo?: string | null;
   dryRun: boolean;
+  /** Recipient (defaults to the owner). Members' dedup keys carry their "u<id>:" prefix. */
+  userId?: number;
 }
 
 /**
@@ -23,7 +25,7 @@ export interface SendOnceInput {
 export async function sendOnce(h: DbHandle, tg: TelegramSink, a: SendOnceInput): Promise<"sent" | "duplicate"> {
   const claimed = await h.db
     .insert(alerts)
-    .values({ eventId: a.eventId, kind: a.kind, dedupKey: a.dedupKey, dryRun: a.dryRun })
+    .values({ eventId: a.eventId, kind: a.kind, dedupKey: a.dedupKey, dryRun: a.dryRun, userId: a.userId ?? 1 })
     .onConflictDoNothing()
     .returning({ id: alerts.id });
   const id = claimed[0]?.id;

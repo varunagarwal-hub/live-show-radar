@@ -78,7 +78,21 @@ export const Snapshot = z.object({
   upcoming: z.array(SnapshotEvent),
   /** Alert dedup keys already sent for upcoming events (real and dry-run kept apart). */
   sentAlertKeys: z.array(z.string()),
+  /** Artists the owner watches (owner-only paths: reminders, tier alerts, digest). */
+  ownerArtistIds: z.array(z.number()).default([]),
+  /** Other people with Telegram connected: what they follow and what they decided. */
+  members: z
+    .array(
+      z.object({
+        id: z.number(),
+        chatId: z.string(),
+        artistIds: z.array(z.number()),
+        decisions: z.record(z.string(), z.enum(["going", "maybe", "pass", "not_interested"])),
+      }),
+    )
+    .default([]),
 });
+export type SnapshotMember = Snapshot["members"][number];
 export type Snapshot = z.infer<typeof Snapshot>;
 
 export function snapshotAgeMinutes(s: Snapshot | null, now = new Date()): number {

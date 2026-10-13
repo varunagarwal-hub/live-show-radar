@@ -24,6 +24,7 @@ import {
 import type { DbHandle } from "@radar/core/db";
 import { alerts, artists, decisions, events, eventSources, type EventRow } from "@radar/core/db/schema";
 import { eventsForArtists } from "@radar/core/db/queries";
+import { keyPrefix, recipientsFor } from "@radar/core/db/people";
 
 export interface StoreContext {
   h: DbHandle;
@@ -169,24 +170,35 @@ export async function storeCandidate(sc: StoreContext, cache: EventCache, c: Sho
   return outcome;
 }
 
-/** Sends the one new-show alert (or the quiet possible-show note) for an event, if not sent yet. */
+/**
+ * Sends the one new-show alert (or the quiet possible-show note) for an event to everyone who
+ * follows the artist: the owner in their usual chat, other people in the chat they connected.
+ * In dry-run mode members' alerts go to the test chat too, so nothing reaches real people.
+ */
 export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pick<WatchArtist, "name" | "priorityTier" | "bioUrl">): Promise<void> {
   const sources = await sc.h.db.select({ source: eventSources.source, url: eventSources.url }).from(eventSources).where(eq(eventSources.eventId, row.id));
   const ae = toAlertEvent(row, artist, sources);
+  ae.title = row.title;
+  const [art] = await sc.h.db.select({ imageUrl: artists.imageUrl }).from(artists).where(eq(artists.id, row.artistId)).limit(1);
+  for (const r of await recipientsFor(sc.h, row.artistId)) {
+    await alertOne(sc, row, ae, art?.imageUrl ?? null, r.userId, r.chatId && !sc.dryRun ? r.chatId : sc.chatId);
+  }
+}
+
+async function alertOne(sc: StoreContext, row: EventRow, ae: AlertEvent, imageUrl: string | null, userId: number, chatId: string): Promise<void> {
+  const pre = keyPrefix(userId);
   const possible = row.status === "possible";
   // A "possible" show that is now confirmed gets its one real alert, headed "Now confirmed", unless
-  // Karan has already decided on it from the possible-show note: then it needs no second ping.
+  // this person already decided on it from the possible-show note: then it needs no second ping.
   let upgraded = false;
   if (!possible) {
-    const [hint] = await sc.h.db.select({ id: alerts.id }).from(alerts).where(and(eq(alerts.dedupKey, `possible:${row.id}`), eq(alerts.dryRun, sc.dryRun))).limit(1);
+    const [hint] = await sc.h.db.select({ id: alerts.id }).from(alerts).where(and(eq(alerts.dedupKey, `${pre}possible:${row.id}`), eq(alerts.dryRun, sc.dryRun))).limit(1);
     if (hint) {
-      const [decided] = await sc.h.db.select({ s: decisions.status }).from(decisions).where(eq(decisions.eventId, row.id)).limit(1);
+      const [decided] = await sc.h.db.select({ s: decisions.status }).from(decisions).where(and(eq(decisions.eventId, row.id), eq(decisions.userId, userId))).limit(1);
       if (decided) return;
       upgraded = true;
     }
   }
-  const [art] = await sc.h.db.select({ imageUrl: artists.imageUrl }).from(artists).where(eq(artists.id, row.artistId)).limit(1);
-  ae.title = row.title;
   // A tour drops many dates at once (Diljit: 7 in two minutes). The first two get full alerts;
   // further dates of that artist within 20 minutes arrive as short, silent notes.
   let tourDate = false;
@@ -195,21 +207,30 @@ export async function alertForEvent(sc: StoreContext, row: EventRow, artist: Pic
       .select({ id: alerts.id })
       .from(alerts)
       .innerJoin(events, eq(alerts.eventId, events.id))
-      .where(and(eq(events.artistId, row.artistId), eq(alerts.kind, "new_event"), eq(alerts.dryRun, sc.dryRun), gte(alerts.sentAt, new Date(sc.now.getTime() - 20 * 60_000))))
+      .where(
+        and(
+          eq(events.artistId, row.artistId),
+          eq(alerts.kind, "new_event"),
+          eq(alerts.userId, userId),
+          eq(alerts.dryRun, sc.dryRun),
+          gte(alerts.sentAt, new Date(sc.now.getTime() - 20 * 60_000)),
+        ),
+      )
       .limit(2);
     tourDate = recent.length >= 2;
   }
   const html = tourDate ? formatTourDate(ae, sc.now) : formatAlert(ae, sc.now);
   const res = await sendOnce(sc.h, sc.tg, {
-    dedupKey: possible ? `possible:${row.id}` : `new:${row.id}`,
+    dedupKey: `${pre}${possible ? "possible" : "new"}:${row.id}`,
     kind: possible ? "possible_show" : "new_event",
     eventId: row.id,
-    chatId: sc.chatId,
+    chatId,
     html: upgraded ? `✅ <b>Now confirmed</b>\n${html}` : html,
     keyboard: eventKeyboard(row.id, { compact: possible || tourDate }),
     silent: possible || tourDate,
-    photo: possible || tourDate ? null : (art?.imageUrl ?? null),
+    photo: possible || tourDate ? null : imageUrl,
     dryRun: sc.dryRun,
+    userId,
   });
   if (res === "sent") bump(sc.stats, possible ? "possibleSent" : "alertsSent");
 }

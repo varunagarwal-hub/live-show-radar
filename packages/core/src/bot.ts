@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { radarConfig } from "@radar/config";
 import type { DbHandle } from "./db/index";
-import { artists, decisions, events, eventSources, feedback, misses, watchedAccounts } from "./db/schema";
+import { artists, decisions, events, eventSources, feedback, misses, OWNER_USER_ID, users, watchedAccounts } from "./db/schema";
 import { answerQuestion } from "./ask";
 import { buildCalendar } from "./ics";
 import type { Llm } from "./llm";
@@ -48,16 +48,27 @@ function markChosen(eventId: number, chosen: keyof typeof DECISION_TEXT): Inline
   return eventKeyboard(eventId).map((row) => row.map((b) => (b.text === DECISION_TEXT[chosen] ? { ...b, text: `✓ ${b.text}` } : b)));
 }
 
-/** Writes a decision (shared by Telegram buttons and the dashboard). */
-export async function setDecision(h: DbHandle, eventId: number, status: keyof typeof DECISION_TEXT, via: "telegram" | "dashboard", now = new Date()): Promise<boolean> {
+/** Writes one person's decision (shared by Telegram buttons and the dashboard). */
+export async function setDecision(
+  h: DbHandle,
+  eventId: number,
+  status: keyof typeof DECISION_TEXT,
+  via: "telegram" | "dashboard",
+  now = new Date(),
+  userId: number = OWNER_USER_ID,
+): Promise<boolean> {
   const [ev] = await h.db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
   if (!ev) return false;
   await h.db
     .insert(decisions)
-    .values({ eventId, status, via, decidedAt: now })
-    .onConflictDoUpdate({ target: decisions.eventId, set: { status, via, decidedAt: now } });
+    .values({ userId, eventId, status, via, decidedAt: now })
+    .onConflictDoUpdate({ target: [decisions.userId, decisions.eventId], set: { status, via, decidedAt: now } });
   return true;
 }
+
+const WELCOME =
+  "You're connected. I'm Early Access: when an artist you follow announces a show in India, I'll message you here, with tickets, early-bird deadlines and reminders.\n\n" +
+  "Tap Going or Maybe on any alert, and ask me things like <i>anything in Mumbai next month?</i>";
 
 /**
  * Handles one webhook update. Chats not on the allow-list are ignored entirely. Questions only
@@ -69,10 +80,31 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
   const u = parsed.data;
   const now = d.now ?? new Date();
   const chatId = String(u.callback_query?.message?.chat.id ?? u.message?.chat.id ?? "");
-  if (!chatId || !d.allowedChats.has(chatId)) {
-    // Acknowledge foreign button taps silently so Telegram stops retrying; never act on them.
+  if (!chatId) return "ignored";
+  // Who is this? The owner's chats come from TELEGRAM_ALLOWED_CHAT_IDS; everyone else connected
+  // their own chat with a one-time link (/start <code>) from their settings page.
+  let userId: number | null = d.allowedChats.has(chatId) ? OWNER_USER_ID : null;
+  if (userId === null) {
+    const [member] = await d.h.db.select({ id: users.id }).from(users).where(eq(users.telegramChatId, chatId));
+    userId = member?.id ?? null;
+  }
+  const startCode = u.message?.text?.match(/^\/start(?:@\w+)?\s+([A-Za-z0-9_-]{8,64})\s*$/)?.[1];
+  if (startCode && u.message?.chat.id && u.message.chat.id > 0) {
+    const [linked] = await d.h.db
+      .update(users)
+      .set({ telegramChatId: chatId, telegramLinkToken: null })
+      .where(eq(users.telegramLinkToken, startCode))
+      .returning({ id: users.id });
+    if (linked) {
+      await d.tg.sendMessage(chatId, WELCOME);
+      return "handled";
+    }
+  }
+  if (userId === null) {
+    // Unknown chat: never act on it.
     return "ignored";
   }
+  const isOwner = userId === OWNER_USER_ID;
 
   if (u.callback_query) {
     const cq = u.callback_query;
@@ -83,16 +115,22 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
     }
     switch (cb.kind) {
       case "decide": {
-        const ok = await setDecision(d.h, cb.eventId, cb.status, "telegram", now);
+        const ok = await setDecision(d.h, cb.eventId, cb.status, "telegram", now, userId);
         await d.tg.answerCallback(cq.id, ok ? `Marked ${DECISION_TEXT[cb.status]}` : "That show is gone.");
         if (ok && cq.message) await d.tg.editKeyboard(chatId, cq.message.message_id, markChosen(cb.eventId, cb.status)).catch(() => {});
-        if (ok && cb.status === "going" && d.onGoing && radarConfig.features.playlists) await d.onGoing(cb.eventId).catch((e) => d.log?.(`playlist: ${(e as Error).message}`));
+        if (ok && isOwner && cb.status === "going" && d.onGoing && radarConfig.features.playlists) await d.onGoing(cb.eventId).catch((e) => d.log?.(`playlist: ${(e as Error).message}`));
         return "handled";
       }
       case "wrong_artist": {
         const [ev] = await d.h.db.select().from(events).where(eq(events.id, cb.eventId));
         if (!ev) {
           await d.tg.answerCallback(cq.id, "That show is gone.");
+          return "handled";
+        }
+        if (!isOwner) {
+          // Only the owner curates matching; anyone else's report is kept for them to review.
+          await d.h.db.insert(feedback).values({ eventId: ev.id, artistId: ev.artistId, kind: "wrong_artist", note: `from user ${userId}` });
+          await d.tg.answerCallback(cq.id, "Thanks, I've passed that on.");
           return "handled";
         }
         const [a] = await d.h.db.select().from(artists).where(eq(artists.id, ev.artistId));
@@ -110,7 +148,7 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
           .select({ e: events, name: artists.name, decision: decisions.status })
           .from(events)
           .innerJoin(artists, eq(events.artistId, artists.id))
-          .leftJoin(decisions, eq(decisions.eventId, events.id))
+          .leftJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, userId)))
           .where(eq(events.id, cb.eventId));
         if (!row?.e.date) {
           await d.tg.answerCallback(cq.id, row ? "No date yet, so nothing to add." : "That show is gone.");
@@ -126,6 +164,10 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
         return "handled";
       }
       case "handle": {
+        if (!isOwner) {
+          await d.tg.answerCallback(cq.id);
+          return "handled";
+        }
         const [a] = await d.h.db.select().from(artists).where(eq(artists.id, cb.artistId));
         if (!a) {
           await d.tg.answerCallback(cq.id, "That artist is gone.");
@@ -142,6 +184,10 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
         return "handled";
       }
       case "track": {
+        if (!isOwner) {
+          await d.tg.answerCallback(cq.id);
+          return "handled";
+        }
         const [m] = await d.h.db.select().from(misses).where(eq(misses.id, cb.missId));
         if (!m?.suggestedHandle) {
           await d.tg.answerCallback(cq.id, "Nothing to track for that one.");
@@ -172,7 +218,7 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
     await d.tg.sendMessage(chatId, "Questions are switched off right now. The dashboard has everything.");
     return "handled";
   }
-  const answer = await answerQuestion(d.h, d.llm(), question, now);
+  const answer = await answerQuestion(d.h, d.llm(), question, now, userId);
   await d.tg.sendMessage(chatId, answer.html, { keyboard: answer.keyboard, replyTo: u.message?.message_id });
   return "handled";
 }

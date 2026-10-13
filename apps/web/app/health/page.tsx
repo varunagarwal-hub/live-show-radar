@@ -1,5 +1,5 @@
 import { radarConfig } from "@radar/config";
-import { requireUser } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { setAccountActiveAction } from "@/lib/actions";
 import { loadHealth } from "@/lib/data";
 
@@ -11,7 +11,7 @@ const TICKETING = new Set(["district", "bookmyshow"]);
 const NAMES: Record<string, string> = { instagram: "Instagram", district: "District", bookmyshow: "BookMyShow", skillbox: "SkillBox", news: "Google News", email: "Fan-app emails" };
 
 export default async function HealthPage() {
-  await requireUser();
+  await requireOwner();
   const { health, runs, accounts, lastOk } = await loadHealth();
   // Ticketing sites that turn away servers aren't broken sources, just closed doors: they're
   // explained under "Ticketing sites" instead of showing as failures.

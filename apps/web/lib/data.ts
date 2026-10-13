@@ -1,9 +1,11 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
-import { cityConfig, isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, isHomeCity, istDate, addDays, weekPart, type Busy, type Clash } from "@radar/core";
-import { artists, decisions, events, eventSources, jobRuns, playlists, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
+import { cityConfig, isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, istDate, addDays, normalizeCity, weekPart, type Busy, type Clash } from "@radar/core";
+import { followsArtist, mutedFor, tierFor } from "@radar/core/db/people";
+import { artists, decisions, events, eventSources, follows, jobRuns, playlists, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
 import type { TierJson } from "@radar/core/db/schema";
+import type { Viewer } from "./auth";
 import { getDb } from "./db";
 
 /** Everything a stub needs, serialisable for client components (dates as ISO strings). */
@@ -75,56 +77,63 @@ async function busyTimes(now: Date): Promise<Busy[]> {
   }
 }
 
-const HOME_AIRPORT = cityConfig(radarConfig.homeCity)?.airport ?? null;
-function routeTo(city: string): { from: string; to: string } | null {
+/** The flight route from this person's home city, when the show is somewhere else. */
+function routeTo(home: string, city: string): { from: string; to: string } | null {
+  const from = cityConfig(home)?.airport;
   const to = cityConfig(city)?.airport;
-  return HOME_AIRPORT && to && to !== HOME_AIRPORT ? { from: HOME_AIRPORT, to } : null;
+  return from && to && to !== from ? { from, to } : null;
 }
 
-export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<ShowCard[]> {
+const sameCity = (a: string, b: string) => normalizeCity(a) === normalizeCity(b);
+
+/** One person's shows: their artists, their tiers and decisions, their home city. */
+export async function loadShows(v: Viewer, q: ShowQuery = {}, now = new Date()): Promise<ShowCard[]> {
   const { db } = await getDb();
   const today = istDate(now);
+  const tier = tierFor(v.id);
   const conds = [
     // Possible (low-confidence) shows are listed too, marked Unconfirmed: you may have decided on them.
     inArray(events.status, ["announced", "possible"]),
-    eq(artists.muted, false),
+    followsArtist(v.id),
     q.includeUndated === false ? gte(events.date, q.from ?? today) : or(gte(events.date, q.from ?? today), isNull(events.date)),
   ];
   if (q.to) conds.push(lte(events.date, q.to));
   if (q.cities?.length) conds.push(inArray(events.city, q.cities));
-  if (q.tiers?.length) conds.push(inArray(artists.priorityTier, q.tiers));
+  if (q.tiers?.length) conds.push(inArray(tier, q.tiers));
   if (q.decisions?.length) {
     const st = q.decisions.filter((d) => d !== "undecided") as ("going" | "maybe" | "pass" | "not_interested")[];
     conds.push(or(st.length ? inArray(decisions.status, st) : undefined, q.decisions.includes("undecided") ? isNull(decisions.status) : undefined)!);
   }
   const rows = await db
-    .select({ e: events, a: artists, decision: decisions.status, playlist: playlists.url })
+    .select({ e: events, a: artists, tier, decision: decisions.status, playlist: playlists.url })
     .from(events)
     .innerJoin(artists, eq(events.artistId, artists.id))
-    .leftJoin(decisions, eq(decisions.eventId, events.id))
+    .leftJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, v.id)))
     .leftJoin(playlists, eq(playlists.eventId, events.id))
     .where(and(...conds))
     .orderBy(asc(events.date))
     .limit(300);
   const ids = rows.map((r) => r.e.id);
   const srcs = ids.length ? await db.select().from(eventSources).where(inArray(eventSources.eventId, ids)) : [];
-  const busy = await busyTimes(now);
+  // Busy times come from the owner's own calendar; nobody else has connected one.
+  const busy = v.isOwner ? await busyTimes(now) : [];
   const clashes = findClashes(
     rows.map((r) => ({ id: r.e.id, artistName: r.a.name, city: r.e.city, date: r.e.date, endDate: r.e.endDate, decision: r.decision })),
     busy,
   );
-  return rows.map(({ e, a, decision, playlist }) => {
+  return rows.map(({ e, a, tier: myTier, decision, playlist }) => {
     const d = decideByDeadline(e, now);
+    const home = sameCity(e.city, v.homeCity);
     return {
       id: e.id,
       artistId: a.id,
       artistName: a.name,
-      priorityTier: a.priorityTier,
+      priorityTier: myTier,
       imageUrl: a.imageUrl,
       instagramHandle: a.handleStatus === "confirmed" ? a.instagramHandle : null,
       instagramUrl: a.handleStatus === "confirmed" && a.instagramHandle ? `https://www.instagram.com/${a.instagramHandle}/` : null,
       city: e.city,
-      isHome: isHomeCity(e.city),
+      isHome: home,
       venue: e.venue,
       date: e.date,
       endDate: e.endDate,
@@ -141,20 +150,21 @@ export async function loadShows(q: ShowQuery = {}, now = new Date()): Promise<Sh
       decision: decision ?? null,
       deadline: d ? { at: d.at.toISOString(), kind: d.kind } : null,
       soldOut: e.tiers.length > 0 && e.tiers.every((t) => t.status === "sold_out"),
-      playlistUrl: playlist ?? null,
+      // Pre-show playlists are private ones in the owner's Spotify: only the owner can open them.
+      playlistUrl: v.isOwner ? (playlist ?? null) : null,
       sources: srcs.filter((s) => s.eventId === e.id).map((s) => ({ source: s.source, url: s.url })),
       createdAt: e.createdAt.toISOString(),
       clashes: clashes.get(e.id) ?? [],
-      flightsUrl: e.date && !isHomeCity(e.city) ? flightsSearchUrl(e.city, e.date, e.endDate) : null,
-      flightRoute: routeTo(e.city),
+      flightsUrl: e.date && !home ? flightsSearchUrl(e.city, e.date, e.endDate, v.homeCity) : null,
+      flightRoute: routeTo(v.homeCity, e.city),
       weekPart: e.date ? weekPart(e.date) : null,
       handleUnconfirmed: e.handleUnconfirmed,
     };
   });
 }
 
-export async function loadHome(now = new Date()) {
-  const shows = await loadShows({}, now);
+export async function loadHome(v: Viewer, now = new Date()) {
+  const shows = await loadShows(v, {}, now);
   const visible = shows.filter((s) => s.decision !== "pass" && s.decision !== "not_interested");
   const in72h = now.getTime() + 72 * 3_600_000;
   // Every upcoming show you are going to, soonest first: the stage rotates through them.
@@ -172,16 +182,24 @@ export function sortByDeadline(list: ShowCard[]): ShowCard[] {
   return [...list].sort((a, b) => (a.deadline ? Date.parse(a.deadline.at) : Infinity) - (b.deadline ? Date.parse(b.deadline.at) : Infinity) || (a.date ?? "9").localeCompare(b.date ?? "9"));
 }
 
-export async function loadMonth(month: string, now = new Date()) {
+export async function loadMonth(v: Viewer, month: string, now = new Date()) {
   const from = `${month}-01`;
   const to = addDays(addDays(from, 32).slice(0, 8) + "01", -1);
-  const shows = await loadShows({ from, to, includeUndated: false }, now);
+  const shows = await loadShows(v, { from, to, includeUndated: false }, now);
   return shows.filter((s) => s.decision !== "not_interested");
 }
 
-export async function loadArtists() {
+/** This person's artists with their own tier and mute (muted ones included, to unmute). */
+export async function loadArtists(v: Viewer) {
   const { db } = await getDb();
-  return db.select().from(artists).orderBy(asc(artists.priorityTier), asc(artists.name));
+  const tier = tierFor(v.id);
+  const muted = mutedFor(v.id);
+  const rows = await db
+    .select({ a: artists, tier, muted })
+    .from(artists)
+    .where(or(followsArtist(v.id), sql`exists (select 1 from ${follows} f where f.artist_id = ${artists.id} and f.user_id = ${v.id})`))
+    .orderBy(asc(tier), asc(artists.name));
+  return rows.map((r) => ({ ...r.a, priorityTier: r.tier, muted: r.muted }));
 }
 
 export async function loadHealth() {

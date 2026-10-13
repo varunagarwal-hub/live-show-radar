@@ -20,9 +20,9 @@ function marqueeItems(going: ShowCard[], closing: ShowCard[], decide: ShowCard[]
 }
 
 export default async function NextUp() {
-  await requireUser();
+  const v = await requireUser();
   if (!radarConfig.features.dashboard) return <p className="empty">The dashboard is switched off. Telegram alerts still work.</p>;
-  const { goingNext, closingSoon, decide, recent, total } = await loadHome();
+  const { goingNext, closingSoon, decide, recent, total } = await loadHome(v);
 
   return (
     <>

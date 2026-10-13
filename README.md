@@ -32,13 +32,14 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit ([components map](
 13. [Point Telegram at the webhook](#13-point-telegram-at-the-webhook)
 14. [Dry run, then go live](#14-dry-run-then-go-live)
 15. [Subscribe to the calendar feed](#15-subscribe-to-the-calendar-feed)
-16. [Where every secret goes](#where-every-secret-goes)
-17. [How the Instagram token refresh works](#how-the-instagram-token-refresh-works)
-18. [Keepalive: why there's a monthly commit](#keepalive)
-19. [Free-tier budget](#free-tier-budget)
-20. [Configuration and feature flags](#configuration-and-feature-flags)
-21. [Development](#development)
-22. [Known limitations](#known-limitations)
+16. [Inviting other people](#16-inviting-other-people)
+17. [Where every secret goes](#where-every-secret-goes)
+18. [How the Instagram token refresh works](#how-the-instagram-token-refresh-works)
+19. [Keepalive: why there's a monthly commit](#keepalive)
+20. [Free-tier budget](#free-tier-budget)
+21. [Configuration and feature flags](#configuration-and-feature-flags)
+22. [Development](#development)
+23. [Known limitations](#known-limitations)
 
 ---
 
@@ -255,6 +256,34 @@ In Google Calendar: *Other calendars* → **+** → *From URL* → paste it. You
 - Decide-by deadlines as short reminders with an alert.
 
 Entries keep stable IDs, so changes update them instead of duplicating. Google refreshes subscribed calendars every few hours. That's Google's schedule, not ours.
+
+---
+
+## 16. Inviting other people
+
+Early Access started as one person's radar. You (the owner, `ALLOWED_EMAIL`) are user 1 and keep everything you had; other people get their own artists, alerts, decisions and calendar.
+
+**How someone gets in**
+1. On **More → Door list** (`/admin`), print an invite: who it's for, how many people it admits, and when it expires. Copy its link (`/join/CODE`).
+2. They open the link, sign in with Google, and the code is filled in. One tap and they're in.
+3. They land on **You** (`/you`), which has three steps: add artists (search, or Connect Spotify), connect Telegram, and copy their calendar link.
+
+Turn on **Open sign-ups** on the same page to let anyone with a Google account in without a code.
+
+**Connect Spotify (up to 4 people besides you).** Spotify's Development Mode lets 5 accounts use the app in total. For each person:
+1. On [developer.spotify.com](https://developer.spotify.com/dashboard), open your app, then **Settings → User Management** and add their name and Spotify email.
+2. One-time: under **Settings → Redirect URIs**, add `https://<your-app>.vercel.app/api/spotify/callback`.
+
+Everyone else adds artists by search, which works for anyone.
+
+**Telegram.** The same bot serves everyone. Each person's **Connect** link on `/you` carries a one-time code. They tap Start, and from then on their alerts go to their own chat.
+
+**What's shared and what isn't**
+- **Shared:** artists are matched once for everyone, so more people don't mean more scraping. Instagram handles and aliases are yours to curate. Everyone's "Wrong artist" reports reach you.
+- **Personal:** tiers, mutes, decisions, alerts, reminders, questions to the bot, home city (for flights), and the calendar feed.
+- **Only you:** pre-show playlists (made in your Spotify), calendar clash detection, the Sunday digest, Health, and Door list.
+
+Stored Spotify tokens are encrypted with `TOKEN_ENC_KEY` (`pnpm secrets generate`, then push it to GitHub and Vercel).
 
 ---
 

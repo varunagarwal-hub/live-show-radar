@@ -2,7 +2,8 @@ import { and, asc, eq, gte, inArray, isNull, lte, or, sql, type AnyColumn, type 
 import { z } from "zod";
 import { radarConfig } from "@radar/config";
 import type { DbHandle } from "./db/index";
-import { artists, decisions, events } from "./db/schema";
+import { followsArtist, tierFor } from "./db/people";
+import { artists, decisions, events, OWNER_USER_ID } from "./db/schema";
 import type { TierJson } from "./db/schema";
 import type { Llm } from "./llm";
 import { decideByDeadline, DEADLINE_LABEL } from "./deadline";
@@ -55,16 +56,18 @@ export async function questionToFilter(llm: Llm, question: string, artistNames: 
 const col = (c: AnyColumn, name: string) => sql`${c}`.as(name);
 
 /** Builds the parameterized SELECT for a filter. Values only ever travel as bind parameters. */
-export function buildAskQuery(h: DbHandle, f: AskFilter, now = new Date()): { sql: string; params: unknown[] } {
+export function buildAskQuery(h: DbHandle, f: AskFilter, now = new Date(), userId: number = OWNER_USER_ID): { sql: string; params: unknown[] } {
   const today = istDate(now);
+  const tier = tierFor(userId);
   const conds: (SQL | undefined)[] = [
     inArray(events.status, ["announced", "possible"]),
-    eq(artists.muted, false),
+    // Only this person's artists, and (below) only their decisions.
+    followsArtist(userId),
     f.date_from ? gte(events.date, f.date_from) : or(gte(events.date, today), isNull(events.date)),
   ];
   if (f.date_to) conds.push(lte(events.date, f.date_to));
   if (f.cities.length) conds.push(inArray(sql`lower(${events.city})`, f.cities.map((c) => c.toLowerCase())));
-  if (f.priority_tiers.length) conds.push(inArray(artists.priorityTier, f.priority_tiers));
+  if (f.priority_tiers.length) conds.push(inArray(tier, f.priority_tiers));
   if (f.early_bird_status.length) conds.push(inArray(events.earlyBirdStatus, f.early_bird_status));
   if (f.artists.length) {
     const names = f.artists.map((a) => a.toLowerCase());
@@ -84,7 +87,7 @@ export function buildAskQuery(h: DbHandle, f: AskFilter, now = new Date()): { sq
     .select({
       id: col(events.id, "id"),
       artist_name: col(artists.name, "artist_name"),
-      priority_tier: col(artists.priorityTier, "priority_tier"),
+      priority_tier: sql`${tier}`.as("priority_tier"),
       city: col(events.city, "city"),
       venue: col(events.venue, "venue"),
       date: col(events.date, "date"),
@@ -99,7 +102,7 @@ export function buildAskQuery(h: DbHandle, f: AskFilter, now = new Date()): { sq
     })
     .from(events)
     .innerJoin(artists, eq(events.artistId, artists.id))
-    .leftJoin(decisions, eq(decisions.eventId, events.id))
+    .leftJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, userId)))
     .where(and(...conds))
     .orderBy(asc(events.date))
     .limit(100);
@@ -147,8 +150,8 @@ const rowDeadline = (r: AskRow, now: Date) =>
 const minPrice = (r: AskRow) => Math.min(...r.tiers.filter((t) => t.price_inr !== null && t.status !== "sold_out").map((t) => t.price_inr!), Infinity);
 
 /** Runs the filter read-only, then applies the deadline window and sort (computed in code). */
-export async function runAsk(h: DbHandle, f: AskFilter, now = new Date()): Promise<AskRow[]> {
-  const q = buildAskQuery(h, f, now);
+export async function runAsk(h: DbHandle, f: AskFilter, now = new Date(), userId: number = OWNER_USER_ID): Promise<AskRow[]> {
+  const q = buildAskQuery(h, f, now, userId);
   let rows = (await h.readOnly<Record<string, unknown>>(q.sql, q.params)).map(normalizeRow);
   if (f.deadline_within_days !== null) {
     const until = now.getTime() + f.deadline_within_days * 86_400_000;
@@ -183,15 +186,15 @@ export interface AskAnswer {
 }
 
 /** Full ask flow: question → filter (LLM) → read-only query → short reply (LLM, with fallback). */
-export async function answerQuestion(h: DbHandle, llm: Llm, question: string, now = new Date()): Promise<AskAnswer> {
-  const names = (await h.readOnly<{ name: string }>("select name from artists where muted = false order by priority_tier, name limit 200", [])).map((r) => r.name);
+export async function answerQuestion(h: DbHandle, llm: Llm, question: string, now = new Date(), userId: number = OWNER_USER_ID): Promise<AskAnswer> {
+  const names = (await h.db.select({ name: artists.name }).from(artists).where(followsArtist(userId)).orderBy(asc(artists.priorityTier), asc(artists.name)).limit(200)).map((r) => r.name);
   let filter: AskFilter;
   try {
     filter = await questionToFilter(llm, question, names, now);
   } catch {
     return { html: "I couldn't work that question out right now. Try again in a minute, or open the dashboard.", rows: [], filter: null };
   }
-  const rows = await runAsk(h, filter, now);
+  const rows = await runAsk(h, filter, now, userId);
   if (!rows.length) {
     return { html: "Nothing matches that right now. The radar checks every 30 minutes, so ask again later or widen the dates.", rows, filter };
   }

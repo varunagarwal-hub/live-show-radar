@@ -34,6 +34,8 @@ export const EnvSchema = z.object({
   AUTH_GOOGLE_ID: z.string().min(10),
   AUTH_GOOGLE_SECRET: z.string().min(10),
   PUBLIC_BASE_URL: z.string().url(),
+  /** Encrypts people's stored Spotify tokens (users.spotify_refresh_enc). */
+  TOKEN_ENC_KEY: z.string().min(32).optional(),
   RADAR_DRY_RUN: z.string().optional(),
   RADAR_STATE_DIR: z.string().default(".radar-state"),
 });

@@ -29,8 +29,9 @@ import {
   type TierState,
 } from "@radar/core";
 import type { DbHandle } from "@radar/core/db";
-import { events, tierSnapshots, type FieldChange } from "@radar/core/db/schema";
+import { events, OWNER_USER_ID, tierSnapshots, type FieldChange } from "@radar/core/db/schema";
 import { loadSnapshot } from "@radar/core/db/queries";
+import { keyPrefix } from "@radar/core/db/people";
 import { BlockedError, parseTierPage, politeFetch, RobotsDisallowedError, type PageFetcher } from "@radar/sources";
 
 export interface TiersDeps {
@@ -116,20 +117,43 @@ export async function runTiers(d: TiersDeps) {
   const sent = new Set(snapshot.sentAlertKeys.filter((k) => k.startsWith("dry:") === d.dryRun).map((k) => k.replace(/^dry:/, "")));
   const today = istDate(d.now);
 
+  // Whose shows: the owner's own artists (an empty list is an older snapshot: everything), and
+  // each connected member's artists with their own decisions.
+  const owned = snapshot.ownerArtistIds.length ? new Set(snapshot.ownerArtistIds) : null;
+  const ownerEvents = owned ? snapshot.upcoming.filter((e) => owned.has(e.artistId)) : snapshot.upcoming;
+  const upcoming = snapshot.upcoming;
+  const audiences = [
+    { userId: OWNER_USER_ID, chatId: d.chatId, events: ownerEvents },
+    ...snapshot.members.map((m) => {
+      const follows = new Set(m.artistIds);
+      return {
+        userId: m.id,
+        // In dry-run mode members' messages go to the test chat, never to real people.
+        chatId: d.dryRun ? d.chatId : m.chatId,
+        events: upcoming.filter((e) => follows.has(e.artistId)).map((e) => ({ ...e, decision: m.decisions[String(e.id)] ?? null })),
+      };
+    }),
+  ];
+
   // Reminders first: they're time-critical, and late cron runs must still deliver them.
-  for (const r of dueReminders(snapshot.upcoming, d.now, sent)) {
-    const ev = snapshot.upcoming.find((e) => e.id === r.eventId)!;
-    const res = await sendOnce(await db(), d.tg, {
-      dedupKey: r.dedupKey,
-      kind: r.kind,
-      eventId: r.eventId,
-      chatId: d.chatId,
-      html: formatReminder(r.kind, snapshotToAlertEvent(ev, snapshot.artists.find((a) => a.id === ev.artistId)?.bioUrl ?? null), d.now),
-      keyboard: eventKeyboard(r.eventId, { compact: true }),
-      dryRun: d.dryRun,
-    });
-    if (res === "sent") stats.remindersSent = (stats.remindersSent ?? 0) + 1;
-    snapshot.sentAlertKeys.push(snapshotAlertKey(r.dedupKey, d.dryRun));
+  for (const a of audiences) {
+    const pre = keyPrefix(a.userId);
+    const mine = new Set([...sent].filter((k) => (pre ? k.startsWith(pre) : !/^u\d+:/.test(k))).map((k) => k.slice(pre.length)));
+    for (const r of dueReminders(a.events, d.now, mine)) {
+      const ev = a.events.find((e) => e.id === r.eventId)!;
+      const res = await sendOnce(await db(), d.tg, {
+        dedupKey: `${pre}${r.dedupKey}`,
+        kind: r.kind,
+        eventId: r.eventId,
+        chatId: a.chatId,
+        html: formatReminder(r.kind, snapshotToAlertEvent(ev, snapshot.artists.find((x) => x.id === ev.artistId)?.bioUrl ?? null), d.now),
+        keyboard: eventKeyboard(r.eventId, { compact: true }),
+        dryRun: d.dryRun,
+        userId: a.userId,
+      });
+      if (res === "sent") stats.remindersSent = (stats.remindersSent ?? 0) + 1;
+      snapshot.sentAlertKeys.push(snapshotAlertKey(`${pre}${r.dedupKey}`, d.dryRun));
+    }
   }
 
   await lookUpBookingPages(d, snapshot, today, stats, db).then((n) => (wrote ||= n > 0));
@@ -183,18 +207,28 @@ export async function runTiers(d: TiersDeps) {
         stats.snapshots = (stats.snapshots ?? 0) + 1;
 
         const ae = snapshotToAlertEvent({ ...e, tiers: next.tiers, earlyBirdStatus: next.earlyBirdStatus === "unknown" ? e.earlyBirdStatus : next.earlyBirdStatus });
-        for (const c of changes) {
-          const res = await sendOnce(hh, d.tg, {
-            dedupKey: `tier:${e.id}:${c}:${hash}`,
-            kind: `tier:${c}`,
-            eventId: e.id,
-            chatId: d.chatId,
-            html: [`🎟 <b>${esc(e.artistName)}, ${esc(e.city)}: ${TIER_CHANGE_TEXT[c]}</b>`, ...ticketLines(ae, d.now), `🛒 <a href="${esc(e.ticketUrl!)}">Open tickets</a>`].join("\n"),
-            keyboard: c === "sold_out" ? undefined : eventKeyboard(e.id, { compact: true }),
-            silent: c === "sold_out" && e.decision !== "maybe" && e.decision !== "going",
-            dryRun: d.dryRun,
-          });
-          if (res === "sent") stats.tierAlerts = (stats.tierAlerts ?? 0) + 1;
+        const html = (c: (typeof changes)[number]) =>
+          [`🎟 <b>${esc(e.artistName)}, ${esc(e.city)}: ${TIER_CHANGE_TEXT[c]}</b>`, ...ticketLines(ae, d.now), `🛒 <a href="${esc(e.ticketUrl!)}">Open tickets</a>`].join("\n");
+        // The owner hears about every watched show as before; other people only about shows
+        // they're going to or might go to.
+        for (const a of audiences) {
+          const mine = a.events.find((x) => x.id === e.id);
+          if (!mine) continue;
+          if (a.userId !== OWNER_USER_ID && mine.decision !== "going" && mine.decision !== "maybe") continue;
+          for (const c of changes) {
+            const res = await sendOnce(hh, d.tg, {
+              dedupKey: `${keyPrefix(a.userId)}tier:${e.id}:${c}:${hash}`,
+              kind: `tier:${c}`,
+              eventId: e.id,
+              chatId: a.chatId,
+              html: html(c),
+              keyboard: c === "sold_out" ? undefined : eventKeyboard(e.id, { compact: true }),
+              silent: c === "sold_out" && mine.decision !== "maybe" && mine.decision !== "going",
+              dryRun: d.dryRun,
+              userId: a.userId,
+            });
+            if (res === "sent") stats.tierAlerts = (stats.tierAlerts ?? 0) + 1;
+          }
         }
       } catch (err) {
         if (err instanceof BlockedError) stats.blocked = (stats.blocked ?? 0) + 1;

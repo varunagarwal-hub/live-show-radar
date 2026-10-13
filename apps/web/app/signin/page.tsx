@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { Crowd } from "@/components/Poster";
+import { getViewer, sessionIdentity } from "@/lib/auth";
 import { BackstagePass } from "./BackstagePass";
 import { SignInButton } from "./SignInButton";
 
@@ -6,6 +8,9 @@ const HEADLINE = ["Who’s", "on", "the", "list?"];
 
 export default async function SignIn({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
+  // Already in: go to the radar. Signed in but not on the list yet: the invite page.
+  if (await getViewer()) redirect("/");
+  if (await sessionIdentity()) redirect("/join");
   return (
     <section className="signin stage">
       <div className="spot spot-l si-spot-l" aria-hidden="true" />
@@ -24,16 +29,18 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
             </span>
           ))}
         </h1>
-        <p className="poster-meta si-rise">One name on this guest list, and the bouncer knows your face. Flash your Google pass and head straight for the barricade.</p>
+        <p className="poster-meta si-rise">The guest list is invite-only, and the bouncer knows your face. Flash your Google pass and head straight for the barricade.</p>
         {error && (
           <p role="alert" className="si-rise si-error">
-            That account isn&rsquo;t on the list. Only the email in ALLOWED_EMAIL can get in.
+            Google sign-in didn&rsquo;t go through. Give it another go.
           </p>
         )}
         <div className="si-rise">
           <SignInButton />
         </div>
-        <p className="si-rise si-small">Every show your artists announce in India, before the early-birds are gone.</p>
+        <p className="si-rise si-small">
+          Every show your artists announce in India, before the early-birds are gone. Got an invite? Sign in, then enter your code.
+        </p>
       </div>
       <BackstagePass />
       <Crowd />

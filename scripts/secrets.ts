@@ -2,7 +2,8 @@
  * Manage local secrets without pasting them anywhere else.
  *   pnpm secrets set GEMINI_API_KEY GROQ_API_KEY   prompt (hidden) and save to .env
  *   pnpm secrets generate                          fill the random secrets that are still empty
- *   pnpm secrets push                              copy the GitHub-side values from .env to GitHub secrets (gh CLI)
+ *   pnpm secrets push [NAME…]                      copy the GitHub-side values from .env to GitHub secrets (gh CLI)
+ *   pnpm secrets push-vercel [NAME…]               the same for Vercel; with names, only those keys
  *   pnpm secrets status                            which variables are set (names only)
  * Values are never printed.
  */
@@ -31,6 +32,8 @@ const GITHUB_SECRETS = [
   "INSTAGRAM_ACCESS_TOKEN",
   "SETLISTFM_API_KEY",
   "MUSICBRAINZ_CONTACT",
+  // Encrypts people's stored Spotify tokens (multi-user).
+  "TOKEN_ENC_KEY",
   // Deploy safety net (.github/workflows/deploy.yml).
   "VERCEL_DEPLOY_HOOK",
 ];
@@ -59,8 +62,9 @@ const VERCEL_VARS = [
   "AUTH_GOOGLE_ID",
   "AUTH_GOOGLE_SECRET",
   "RADAR_DRY_RUN",
+  "TOKEN_ENC_KEY",
 ];
-const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32 } as const;
+const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32, TOKEN_ENC_KEY: 32 } as const;
 
 function readEnv(): Map<string, string> {
   const m = new Map<string, string>();
@@ -143,6 +147,8 @@ async function askHidden(prompt: string): Promise<string> {
 }
 
 const [cmd = "status", ...names] = process.argv.slice(2);
+/** push / push-vercel: only these keys when given. */
+const only = names.filter((n) => /^[A-Z][A-Z0-9_]+$/.test(n));
 const env = readEnv();
 
 /** The system clipboard's text, for `set NAME --clipboard` (no pasting into a terminal). */
@@ -206,7 +212,7 @@ if (cmd === "set" && names.includes("--clipboard")) {
   }
   const token = (JSON.parse(readFileSync(authFile, "utf8")) as { token: string }).token;
   const { projectId, orgId } = JSON.parse(readFileSync(linkFile, "utf8")) as { projectId: string; orgId: string };
-  const present = VERCEL_VARS.filter((k) => env.get(k));
+  const present = VERCEL_VARS.filter((k) => env.get(k) && (!only.length || only.includes(k)));
   const body = present.map((key) => ({ key, value: env.get(key)!, type: "encrypted", target: ["production", "preview"] }));
   const res = await fetch(`https://api.vercel.com/v10/projects/${projectId}/env?upsert=true&teamId=${orgId}`, {
     method: "POST",
@@ -218,12 +224,12 @@ if (cmd === "set" && names.includes("--clipboard")) {
     process.exit(1);
   }
   console.log(`✓ Saved ${present.length} variables to Vercel: ${present.join(", ")}`);
-  const missing = VERCEL_VARS.filter((k) => !env.get(k));
+  const missing = VERCEL_VARS.filter((k) => !env.get(k) && (!only.length || only.includes(k)));
   if (missing.length) console.log(`  Not set in .env yet (skipped): ${missing.join(", ")}`);
   console.log("  Redeploy for them to take effect (pushing to GitHub does that).");
 } else if (cmd === "push") {
-  const present = GITHUB_SECRETS.filter((k) => env.get(k));
-  const missing = GITHUB_SECRETS.filter((k) => !env.get(k));
+  const present = GITHUB_SECRETS.filter((k) => env.get(k) && (!only.length || only.includes(k)));
+  const missing = GITHUB_SECRETS.filter((k) => !env.get(k) && (!only.length || only.includes(k)));
   for (const k of present) {
     const r = spawnSync("gh", ["secret", "set", k], { input: env.get(k), stdio: ["pipe", "ignore", "pipe"], encoding: "utf8" });
     console.log(r.status === 0 ? `✓ ${k}` : `✗ ${k}: ${r.stderr.trim().split("\n")[0]}`);

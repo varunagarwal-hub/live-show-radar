@@ -3,6 +3,7 @@ import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
 import { BottomNav, DesktopNav, SignOutButton, ThemeToggle } from "@/components/Chrome";
 import { Effects } from "@/components/Effects";
 import { Logo } from "@/components/Logo";
+import { getViewer } from "@/lib/auth";
 import { mastheadDate } from "@/lib/format";
 import "./globals.css";
 import "./stage.css";
@@ -30,7 +31,8 @@ export const viewport: Viewport = {
 const themeInit = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const viewer = await getViewer().catch(() => null);
   return (
     <html lang="en-IN" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
       <head>
@@ -62,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="frame">
           <header className="masthead">
             <Logo sub={`Bengaluru & beyond · ${mastheadDate()}`} />
-            <DesktopNav />
+            <DesktopNav isOwner={viewer?.isOwner ?? false} />
             <div className="masthead-tools">
               <ThemeToggle />
               <SignOutButton />

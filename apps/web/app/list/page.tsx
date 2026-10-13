@@ -22,13 +22,13 @@ function href(p: Params, change: Partial<Params>) {
 }
 
 export default async function ListPage({ searchParams }: { searchParams: Promise<Params> }) {
-  await requireUser();
+  const v = await requireUser();
   const p = await searchParams;
   const city = radarConfig.cities.find((c) => c.name === p.city)?.name;
   const tier = (["A", "B", "C"] as const).find((t) => t === p.tier);
   const status = STATUSES.find(([k]) => k === p.status)?.[0];
   const date = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined);
-  const shows = await loadShows({ cities: city ? [city] : undefined, tiers: tier ? [tier] : undefined, decisions: status ? [status] : undefined, from: date(p.from), to: date(p.to) });
+  const shows = await loadShows(v, { cities: city ? [city] : undefined, tiers: tier ? [tier] : undefined, decisions: status ? [status] : undefined, from: date(p.from), to: date(p.to) });
   const visible = status === "pass" ? shows : shows.filter((s) => s.decision !== "pass" && s.decision !== "not_interested");
 
   return (

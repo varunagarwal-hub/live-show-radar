@@ -12,10 +12,12 @@ import {
   sourceHealth,
   tierSnapshots,
   watchedAccounts,
+  OWNER_USER_ID,
   type EventRow,
 } from "./schema";
 import type { Snapshot, SnapshotEvent, PendingRun, PendingHealth } from "../state";
 import { addDays, istDate } from "../time";
+import { loadMembers, ownerArtistIds } from "./people";
 import { radarConfig } from "@radar/config";
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
@@ -31,7 +33,7 @@ export async function loadSnapshot(h: DbHandle, now = new Date()): Promise<Snaps
       .select({ e: events, artistName: artists.name, tier: artists.priorityTier, decision: decisions.status })
       .from(events)
       .innerJoin(artists, eq(events.artistId, artists.id))
-      .leftJoin(decisions, eq(decisions.eventId, events.id))
+      .leftJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, OWNER_USER_ID)))
       .where(and(or(gte(events.date, since), isNull(events.date)), inArray(events.status, ["announced", "possible"]))),
   ]);
   const ids = eventRows.map((r) => r.e.id);
@@ -47,6 +49,7 @@ export async function loadSnapshot(h: DbHandle, now = new Date()): Promise<Snaps
       ])
     : [[], [], []];
   const hashes = new Map(hashRows.map((r) => [r.eventId, r.stateHash]));
+  const [owned, members] = await Promise.all([ownerArtistIds(h), loadMembers(h, ids)]);
   const upcoming: SnapshotEvent[] = eventRows.map(({ e, artistName, tier, decision }) => ({
     ...eventToSnapshotFields(e),
     artistName,
@@ -73,6 +76,8 @@ export async function loadSnapshot(h: DbHandle, now = new Date()): Promise<Snaps
     watchedAccounts: accountRows.map((a) => ({ handle: a.handle, kind: a.kind, city: a.city })),
     upcoming,
     sentAlertKeys: alertRows.map((a) => `${a.dryRun ? "dry:" : ""}${a.key}`),
+    ownerArtistIds: [...owned],
+    members,
   };
 }
 

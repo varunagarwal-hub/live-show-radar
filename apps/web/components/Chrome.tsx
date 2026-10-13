@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { MORE, moreFor } from "@/lib/nav";
 import { gsap, prefersReducedMotion } from "./motion";
 
 const LINKS = [
@@ -14,12 +15,10 @@ const LINKS = [
   { href: "/more", label: "More", icon: "M5 12h.01M12 12h.01M19 12h.01" },
 ];
 const DESKTOP = LINKS.slice(0, 4);
-const MORE = [
-  { href: "/artists", label: "Artists", note: "Watchlist, tiers, handles" },
-  { href: "/health", label: "Health", note: "Sources and jobs" },
-];
 
-const isCurrent = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href) || (href === "/more" && (path.startsWith("/artists") || path.startsWith("/health"))));
+const isCurrent = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href) || (href === "/more" && MORE.some((m) => path.startsWith(m.href))));
+/** Signed out (or not let in yet) there is nowhere to go: the sign-in and invite pages stand alone. */
+const isDoor = (path: string) => path.startsWith("/signin") || path.startsWith("/join");
 
 /** Three bouncing bars: the "now playing" mark on the current tab. */
 function Equalizer() {
@@ -32,10 +31,9 @@ function Equalizer() {
   );
 }
 
-export function DesktopNav() {
+export function DesktopNav({ isOwner = false }: { isOwner?: boolean }) {
   const path = usePathname();
-  // Signed out there is nowhere to go yet: the sign-in page stands alone.
-  if (path.startsWith("/signin")) return null;
+  if (isDoor(path)) return null;
   return (
     <nav aria-label="Main">
       {DESKTOP.map((l) => (
@@ -44,17 +42,17 @@ export function DesktopNav() {
           {l.label}
         </Link>
       ))}
-      <MoreMenu path={path} />
+      <MoreMenu path={path} items={moreFor(isOwner)} />
     </nav>
   );
 }
 
-/** "More ▾" in the desktop nav: Artists and Health in a small drop-down set list. */
-function MoreMenu({ path }: { path: string }) {
+/** "More ▾" in the desktop nav: your pages (and the owner's tools) in a small drop-down set list. */
+function MoreMenu({ path, items }: { path: string; items: typeof MORE }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
-  const active = MORE.some((m) => path.startsWith(m.href));
+  const active = items.some((m) => path.startsWith(m.href));
 
   useEffect(() => setOpen(false), [path]);
   useEffect(() => {
@@ -82,7 +80,7 @@ function MoreMenu({ path }: { path: string }) {
       </button>
       {open && (
         <div ref={menu} className="more-panel">
-          {MORE.map((m) => (
+          {items.map((m) => (
             <Link key={m.href} href={m.href} aria-current={path.startsWith(m.href) ? "page" : undefined}>
               <b>{m.label}</b>
               <small>{m.note}</small>
@@ -96,7 +94,7 @@ function MoreMenu({ path }: { path: string }) {
 
 export function BottomNav() {
   const path = usePathname();
-  if (path.startsWith("/signin")) return null;
+  if (isDoor(path)) return null;
   return (
     <nav className="bottom-nav" aria-label="Main">
       {LINKS.map((l) => (
@@ -147,7 +145,7 @@ export function ThemeToggle() {
   );
 }
 
-/** Ends the Google session; hidden on the sign-in page itself. */
+/** Ends the Google session; hidden on the sign-in page (on the invite page it switches accounts). */
 export function SignOutButton({ className = "signout" }: { className?: string }) {
   const path = usePathname();
   if (path.startsWith("/signin")) return null;

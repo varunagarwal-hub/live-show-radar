@@ -5,7 +5,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { optionalEnv, radarConfig, requireEnv, watchedAccounts as accountSeeds } from "@radar/config";
 import { assignTiers, encodeCallback, esc, musicBrainzId, proposeHandle, sendOnce, spotifyFromStore, SpotifyReauthError, type ListeningData } from "@radar/core";
-import { artists, watchedAccounts } from "@radar/core/db/schema";
+import { artists, follows, OWNER_USER_ID, watchedAccounts } from "@radar/core/db/schema";
+import { refreshArtistGlobals } from "@radar/core/db/people";
+import { syncMemberSpotify } from "@radar/core/db/spotify-import";
 import { loadSnapshot } from "@radar/core/db/queries";
 import { currentInstagramToken, maintainInstagramToken } from "./lib/instagram-auth";
 
@@ -42,35 +44,49 @@ process.exitCode = await runJob("watchlist", rt, async (rt) => {
     if (!shortTop || !mediumTop) stats.topArtistsUnavailable = true;
     if (!recent) stats.recentlyPlayedUnavailable = true;
     const tiered = assignTiers(data);
+    // The owner's artists: their follow rows (plus any unclaimed pre-multi-user rows). Artists only
+    // other people follow are matched by Spotify id but never demoted by the owner's listening.
     const existing = await h.db.select().from(artists);
+    const ownFollows = new Map((await h.db.select().from(follows).where(eq(follows.userId, OWNER_USER_ID))).map((f) => [f.artistId, f]));
     let added = 0;
+    const touched: number[] = [];
     for (const t of tiered) {
       const row = existing.find((e) => e.spotifyId === t.spotifyId) ?? existing.find((e) => !e.spotifyId && e.name.toLowerCase() === t.name.toLowerCase());
+      let id: number;
       if (row) {
+        id = row.id;
         await h.db
           .update(artists)
-          .set({
-            spotifyId: t.spotifyId,
-            name: t.name,
-            imageUrl: t.imageUrl ?? row.imageUrl,
-            priorityTier: row.tierOverride ?? t.tier,
-            followed: t.followed,
-            listenedNotFollowed: t.listenedNotFollowed,
-            updatedAt: now,
-          })
+          .set({ spotifyId: t.spotifyId, name: t.name, imageUrl: t.imageUrl ?? row.imageUrl, followed: t.followed, listenedNotFollowed: t.listenedNotFollowed, updatedAt: now })
           .where(eq(artists.id, row.id));
       } else {
-        await h.db.insert(artists).values({ spotifyId: t.spotifyId, name: t.name, imageUrl: t.imageUrl, priorityTier: t.tier, followed: t.followed, listenedNotFollowed: t.listenedNotFollowed });
+        const [ins] = await h.db
+          .insert(artists)
+          .values({ spotifyId: t.spotifyId, name: t.name, imageUrl: t.imageUrl, priorityTier: t.tier, followed: t.followed, listenedNotFollowed: t.listenedNotFollowed })
+          .returning({ id: artists.id });
+        id = ins!.id;
         added++;
       }
+      // The owner's tier lives on their follow row; an override from the Artists page wins.
+      const tier = row?.tierOverride ?? t.tier;
+      await h.db
+        .insert(follows)
+        .values({ userId: OWNER_USER_ID, artistId: id, tier, source: "owner" })
+        .onConflictDoUpdate({ target: [follows.userId, follows.artistId], set: { tier } });
+      touched.push(id);
     }
     // Unfollowed and no longer listened to: drop to tier C (kept, so past events stay intact).
     const current = new Set(tiered.map((t) => t.spotifyId));
     for (const e of existing) {
-      if (e.spotifyId && !current.has(e.spotifyId) && (e.followed || e.priorityTier !== "C")) {
-        await h.db.update(artists).set({ followed: false, priorityTier: e.tierOverride ?? "C", updatedAt: now }).where(eq(artists.id, e.id));
+      const mine = ownFollows.get(e.id);
+      if (!mine || !e.spotifyId || current.has(e.spotifyId)) continue;
+      if (e.followed || mine.tier !== "C") {
+        await h.db.update(artists).set({ followed: false, updatedAt: now }).where(eq(artists.id, e.id));
+        await h.db.update(follows).set({ tier: e.tierOverride ?? "C" }).where(and(eq(follows.userId, OWNER_USER_ID), eq(follows.artistId, e.id)));
+        touched.push(e.id);
       }
     }
+    await refreshArtistGlobals(h, touched);
     Object.assign(stats, { artists: tiered.length, added, tierA: tiered.filter((t) => t.tier === "A").length });
   } catch (err) {
     partial = true;
@@ -86,6 +102,12 @@ process.exitCode = await runJob("watchlist", rt, async (rt) => {
       });
     } else log(`spotify: ${(err as Error).message}`);
   }
+
+  // 3b. Everyone else who connected Spotify (at most 4 others: Spotify's Development Mode limit).
+  const enc = optionalEnv("TOKEN_ENC_KEY");
+  const cid = optionalEnv("SPOTIFY_CLIENT_ID");
+  const csec = optionalEnv("SPOTIFY_CLIENT_SECRET");
+  if (enc && cid && csec) stats.membersSpotifySynced = await syncMemberSpotify(h, { SPOTIFY_CLIENT_ID: cid, SPOTIFY_CLIENT_SECRET: csec, TOKEN_ENC_KEY: enc }, log);
 
   // 4. MusicBrainz IDs (for setlist.fm), at most 25 per day at 1 request/second.
   const contact = optionalEnv("MUSICBRAINZ_CONTACT");

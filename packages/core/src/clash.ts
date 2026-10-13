@@ -100,9 +100,9 @@ export function findClashes(shows: ClashShow[], busy: Busy[]): Map<number, Clash
 
 // NOTE: Google Flights has no documented deep-link API. The `?q=` natural-language search URL
 // is the closest working option; it opens a prefilled search the user can adjust.
-export function flightsSearchUrl(city: string, date: string, endDate?: string | null): string | null {
+export function flightsSearchUrl(city: string, date: string, endDate?: string | null, home: string = radarConfig.homeCity): string | null {
   const to = cityConfig(city)?.airport;
-  const from = cityConfig(radarConfig.homeCity)?.airport;
+  const from = cityConfig(home)?.airport;
   if (!to || !from || to === from) return null;
   const out = addDays(date, 0);
   const back = addDays(endDate ?? date, 1);

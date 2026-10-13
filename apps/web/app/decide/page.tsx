@@ -6,8 +6,8 @@ import { loadShows, sortByDeadline } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function DecidePage() {
-  await requireUser();
-  const shows = sortByDeadline(await loadShows({ decisions: ["maybe"] }));
+  const v = await requireUser();
+  const shows = sortByDeadline(await loadShows(v, { decisions: ["maybe"] }));
   return (
     <section className="section">
       <h1 className="section-title">

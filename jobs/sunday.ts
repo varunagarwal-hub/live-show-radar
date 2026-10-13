@@ -23,7 +23,8 @@ import {
   type MissContext,
   type PlayedShow,
 } from "@radar/core";
-import { artists, decisions, events, misses, rawItems, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
+import { artists, decisions, events, misses, OWNER_USER_ID, rawItems, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
+import { followsArtist } from "@radar/core/db/people";
 import { recentJobFailures } from "@radar/core/db/queries";
 import { createRuntime, log, runJob } from "./lib/runtime";
 
@@ -111,7 +112,7 @@ process.exitCode = await runJob("sunday", rt, async (rt) => {
     const week = await h.db
       .select({ id: events.id })
       .from(events)
-      .innerJoin(decisions, eq(decisions.eventId, events.id))
+      .innerJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, OWNER_USER_ID)))
       .where(and(eq(decisions.status, "going"), eq(events.status, "announced"), gte(events.date, today), lte(events.date, addDays(today, 8))));
     if (week.length) {
       try {
@@ -132,8 +133,9 @@ process.exitCode = await runJob("sunday", rt, async (rt) => {
     .select({ e: events, name: artists.name, decision: decisions.status })
     .from(events)
     .innerJoin(artists, eq(events.artistId, artists.id))
-    .leftJoin(decisions, eq(decisions.eventId, events.id))
-    .where(and(eq(events.status, "announced"), gte(events.date, today), eq(artists.muted, false)))
+    .leftJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, OWNER_USER_ID)))
+    // The digest is the owner's: only their artists.
+    .where(and(eq(events.status, "announced"), gte(events.date, today), followsArtist(OWNER_USER_ID)))
     .orderBy(events.date);
   const upcoming: DigestShow[] = rows
     .filter((r) => r.e.date! <= addDays(today, 60))

@@ -1,31 +1,35 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { setDecision } from "@radar/core";
-import { artists, watchedAccounts } from "@radar/core/db/schema";
-import { requireUser } from "./auth";
+import { followArtist, refreshArtistGlobals } from "@radar/core/db/people";
+import { artists, follows, watchedAccounts } from "@radar/core/db/schema";
+import { requireOwner, requireUser } from "./auth";
 import { getDb } from "./db";
 import { ensurePlaylistForEvent } from "./playlist";
 
 const DecisionInput = z.object({ eventId: z.coerce.number().int().positive(), status: z.enum(["going", "maybe", "pass", "not_interested"]) });
 
-/** Dashboard decisions write the same `decisions` row Telegram buttons do, so both stay in sync. */
+/** Dashboard decisions write the same row Telegram buttons do (per person), so both stay in sync. */
 export async function decideAction(eventId: number, status: "going" | "maybe" | "pass" | "not_interested"): Promise<{ ok: boolean }> {
-  await requireUser();
+  const v = await requireUser();
   const input = DecisionInput.parse({ eventId, status });
   const h = await getDb();
-  const ok = await setDecision(h, input.eventId, input.status, "dashboard");
-  if (ok && input.status === "going") after(() => ensurePlaylistForEvent(input.eventId).catch(() => {}));
-  // No revalidatePath here: the stub keeps its stamp until Karan navigates (pages are dynamic and
+  const ok = await setDecision(h, input.eventId, input.status, "dashboard", new Date(), v.id);
+  // Pre-show playlists are made in the owner's Spotify, so only for the owner.
+  if (ok && v.isOwner && input.status === "going") after(() => ensurePlaylistForEvent(input.eventId).catch(() => {}));
+  // No revalidatePath here: the stub keeps its stamp until you navigate (pages are dynamic and
   // refetch then). Revalidating would yank a just-decided stub off the Decide page mid-animation.
   return { ok };
 }
 
+const id = z.coerce.number().int().positive();
+
 const ArtistInput = z.object({
-  id: z.coerce.number().int().positive(),
+  id,
   instagramHandle: z
     .string()
     .trim()
@@ -35,46 +39,60 @@ const ArtistInput = z.object({
   priorityTier: z.enum(["A", "B", "C"]),
 });
 
+/**
+ * The owner edits the shared artist (handle, aliases) and their own tier; everyone else only sets
+ * their own tier (handles and aliases affect matching for everyone, so the owner curates them).
+ */
 export async function saveArtistAction(form: FormData): Promise<void> {
-  await requireUser();
+  const v = await requireUser();
+  const h = await getDb();
+  if (!v.isOwner) {
+    const input = z.object({ id, priorityTier: z.enum(["A", "B", "C"]) }).parse(Object.fromEntries(form));
+    await h.db.update(follows).set({ tier: input.priorityTier }).where(and(eq(follows.userId, v.id), eq(follows.artistId, input.id)));
+    await refreshArtistGlobals(h, [input.id]);
+    revalidatePath("/artists");
+    return;
+  }
   const input = ArtistInput.parse(Object.fromEntries(form));
-  const { db } = await getDb();
-  const [current] = await db.select().from(artists).where(eq(artists.id, input.id));
+  const [current] = await h.db.select().from(artists).where(eq(artists.id, input.id));
   if (!current) return;
+  const [mine] = await h.db.select().from(follows).where(and(eq(follows.userId, v.id), eq(follows.artistId, input.id)));
   // Saving a handle by hand is confirming it.
   const handle = input.instagramHandle || null;
-  await db
+  await h.db
     .update(artists)
     .set({
       instagramHandle: handle,
       handleStatus: handle ? "confirmed" : "none",
       aliases: input.aliases,
-      priorityTier: input.priorityTier,
       // Only a changed tier counts as an override; saving a handle shouldn't freeze the tier.
-      tierOverride: input.priorityTier !== current.priorityTier ? input.priorityTier : current.tierOverride,
+      tierOverride: input.priorityTier !== (mine?.tier ?? current.priorityTier) ? input.priorityTier : current.tierOverride,
       updatedAt: new Date(),
     })
     .where(eq(artists.id, input.id));
+  await followArtist(h, v.id, input.id, { tier: input.priorityTier, source: mine?.source ?? "owner", muted: mine?.muted ?? false });
   revalidatePath("/artists");
 }
 
-export async function setMutedAction(id: number, muted: boolean): Promise<void> {
-  await requireUser();
-  const { db } = await getDb();
-  await db.update(artists).set({ muted, updatedAt: new Date() }).where(eq(artists.id, z.number().int().positive().parse(id)));
+/** Mutes or unmutes an artist for the signed-in person only. */
+export async function setMutedAction(artistId: number, muted: boolean): Promise<void> {
+  const v = await requireUser();
+  const h = await getDb();
+  const [mine] = await h.db.select().from(follows).where(and(eq(follows.userId, v.id), eq(follows.artistId, id.parse(artistId))));
+  await followArtist(h, v.id, artistId, { muted, tier: mine?.tier, source: mine?.source ?? (v.isOwner ? "owner" : "search") });
   revalidatePath("/", "layout");
 }
 
-export async function confirmHandleAction(id: number): Promise<void> {
-  await requireUser();
+export async function confirmHandleAction(artistId: number): Promise<void> {
+  await requireOwner();
   const { db } = await getDb();
-  await db.update(artists).set({ handleStatus: "confirmed", updatedAt: new Date() }).where(eq(artists.id, z.number().int().positive().parse(id)));
+  await db.update(artists).set({ handleStatus: "confirmed", updatedAt: new Date() }).where(eq(artists.id, id.parse(artistId)));
   revalidatePath("/artists");
 }
 
-export async function setAccountActiveAction(id: number, active: boolean): Promise<void> {
-  await requireUser();
+export async function setAccountActiveAction(accountId: number, active: boolean): Promise<void> {
+  await requireOwner();
   const { db } = await getDb();
-  await db.update(watchedAccounts).set({ active }).where(eq(watchedAccounts.id, z.number().int().positive().parse(id)));
+  await db.update(watchedAccounts).set({ active }).where(eq(watchedAccounts.id, id.parse(accountId)));
   revalidatePath("/health");
 }

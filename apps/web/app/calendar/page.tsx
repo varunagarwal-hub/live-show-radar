@@ -31,11 +31,11 @@ function Act({ s }: { s: ShowCard }) {
  * month grid follows underneath, for a quick look at weekends.
  */
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
-  await requireUser();
+  const v = await requireUser();
   const { m } = await searchParams;
   const todayIst = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
   const month = m && /^\d{4}-\d{2}$/.test(m) ? m : todayIst.slice(0, 7);
-  const shows = (await loadMonth(month)).filter((s) => s.date);
+  const shows = (await loadMonth(v, month)).filter((s) => s.date);
   const byDay = new Map<string, ShowCard[]>();
   for (const s of shows) byDay.set(s.date!, [...(byDay.get(s.date!) ?? []), s]);
 
