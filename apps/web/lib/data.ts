@@ -7,6 +7,8 @@ import { artists, decisions, events, eventSources, follows, jobRuns, playlists, 
 import type { TierJson } from "@radar/core/db/schema";
 import type { Viewer } from "./auth";
 import { getDb } from "./db";
+import { after } from "next/server";
+import { kvGet, kvSet } from "@radar/core/db/queries";
 
 /** Everything a stub needs, serialisable for client components (dates as ISO strings). */
 export interface ShowCard {
@@ -62,19 +64,43 @@ export interface ShowQuery {
 }
 
 let busyCache: { at: number; busy: Busy[] } | null = null;
+let refreshing = false;
+const BUSY_FRESH_MS = 10 * 60_000;
+type StoredBusy = { at: number; busy: { start: string; end: string; summary: string }[] };
 
-/** Google Calendar busy times, cached for 10 minutes per server instance. */
+/** Fetches the owner's calendar and keeps it in memory and in the database for other instances. */
+async function refreshBusy(url: string, now: Date, timeoutMs: number): Promise<Busy[]> {
+  const busy = await Promise.race([
+    fetchBusy(url, now, new Date(now.getTime() + 400 * 86_400_000)),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("calendar timeout")), timeoutMs)),
+  ]);
+  busyCache = { at: Date.now(), busy };
+  const stored: StoredBusy = { at: busyCache.at, busy: busy.map((b) => ({ start: b.start.toISOString(), end: b.end.toISOString(), summary: b.summary })) };
+  await kvSet(await getDb(), "busy_cache", stored);
+  return busy;
+}
+
+/**
+ * Google Calendar busy times for clash warnings, served stale-while-revalidate: pages use the last
+ * copy (memory, else the database) at once and refresh it in the background after the response.
+ * Fetching Google's calendar takes ~0.7 s, so it must never hold up a page. Only when no copy
+ * exists anywhere does a page wait, and then for at most 1.5 s.
+ */
 async function busyTimes(now: Date): Promise<Busy[]> {
   const url = process.env.GOOGLE_CALENDAR_ICS_URL;
   if (!url || !radarConfig.features.clashDetection) return [];
-  if (busyCache && now.getTime() - busyCache.at < 10 * 60_000) return busyCache.busy;
-  try {
-    const busy = await fetchBusy(url, now, new Date(now.getTime() + 400 * 86_400_000));
-    busyCache = { at: now.getTime(), busy };
-    return busy;
-  } catch {
-    return busyCache?.busy ?? [];
+  if (!busyCache) {
+    const stored = await kvGet<StoredBusy>(await getDb(), "busy_cache").catch(() => null);
+    if (stored) busyCache = { at: stored.at, busy: stored.busy.map((b) => ({ start: new Date(b.start), end: new Date(b.end), summary: b.summary })) };
   }
+  if (busyCache) {
+    if (now.getTime() - busyCache.at >= BUSY_FRESH_MS && !refreshing) {
+      refreshing = true;
+      after(() => refreshBusy(url, new Date(), 15_000).catch(() => {}).finally(() => (refreshing = false)));
+    }
+    return busyCache.busy;
+  }
+  return refreshBusy(url, now, 1500).catch(() => []);
 }
 
 /** The flight route from this person's home city, when the show is somewhere else. */

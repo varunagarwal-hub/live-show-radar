@@ -1698,3 +1698,55 @@
   line-height: 1;
   cursor: pointer;
 }
+
+/* ---------- loading: soundcheck skeleton while a page renders ---------- */
+
+.soundcheck {
+  padding-top: 28px;
+  display: grid;
+  gap: 16px;
+}
+.soundcheck-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--pink);
+}
+.sk {
+  background: linear-gradient(90deg, var(--paper-2) 0%, color-mix(in srgb, var(--paper-2) 55%, var(--paper)) 50%, var(--paper-2) 100%) 0 0 / 200% 100%;
+  border-radius: 4px;
+  animation: sk-sweep 1.2s linear infinite;
+}
+.sk-title {
+  height: 44px;
+  width: min(420px, 70%);
+}
+.sk-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.sk-card {
+  height: 150px;
+}
+.sk-line {
+  height: 14px;
+  width: min(640px, 90%);
+}
+.sk-line.short {
+  width: min(380px, 60%);
+}
+@keyframes sk-sweep {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk {
+    animation: none;
+  }
+}

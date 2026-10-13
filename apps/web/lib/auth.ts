@@ -85,13 +85,19 @@ export async function createUser(email: string, name: string | null, inviteCode:
 
 export const signupsOpen = async () => (await kvGet<boolean>(await getDb(), "signup_open")) === true;
 
+let ownerEnsured = false;
+
 /** The signed-in person's account, or null when signed out or not let in yet. Never redirects. */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
   const who = await sessionIdentity();
   if (!who) return null;
   const h = await getDb();
   if (who.email === ownerEmail()) {
-    await ensureOwner(h, who.email);
+    // Once per server instance: it only fills in the owner's email the first time.
+    if (!ownerEnsured) {
+      await ensureOwner(h, who.email);
+      ownerEnsured = true;
+    }
     const [u] = await h.db.select().from(users).where(eq(users.id, OWNER_USER_ID));
     return u ? toViewer(u) : null;
   }

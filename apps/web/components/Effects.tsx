@@ -100,8 +100,8 @@ export function Effects() {
     const ctx = gsap.context(() => {
       // Between pages: a pink-and-blue stage light sweeps across while the new page rises in.
       if (!firstPage && sweep.current) {
-        gsap.fromTo(sweep.current, { xPercent: -110, opacity: 1 }, { xPercent: 110, duration: 0.7, ease: "power2.inOut", onComplete: () => void gsap.set(sweep.current, { opacity: 0 }) });
-        gsap.from(main, { y: 18, opacity: 0, duration: 0.45, ease: "power2.out", delay: 0.12, clearProps: "transform,opacity" });
+        gsap.fromTo(sweep.current, { xPercent: -110, opacity: 1 }, { xPercent: 110, duration: 0.5, ease: "power2.inOut", onComplete: () => void gsap.set(sweep.current, { opacity: 0 }) });
+        gsap.from(main, { y: 10, opacity: 0, duration: 0.25, ease: "power2.out", clearProps: "transform,opacity" });
       }
       // Section titles rise out of a slot as they reach the viewport, like a set-list being lit.
       // Only titles still below the fold are hidden first, so nothing on screen ever flickers.

@@ -52,7 +52,11 @@ export function findExisting<E extends ExistingEvent>(incoming: Pick<EventFields
   if (exact) return exact;
   const artist = existing.filter((e) => e.artistId === incoming.artistId);
   if (incoming.city === "TBA") {
-    if (!incoming.date) return undefined;
+    if (!incoming.date) {
+      // No city and no date ("Diljit announces more shows"): it adds nothing on its own, so it
+      // joins the artist's soonest known show rather than becoming a vague show of its own.
+      return [...artist].filter((e) => e.date).sort((a, b) => a.date!.localeCompare(b.date!))[0];
+    }
     const sameDay = artist.filter((e) => e.date === incoming.date);
     return sameDay.length === 1 ? sameDay[0] : undefined;
   }

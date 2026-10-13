@@ -110,7 +110,9 @@ describe("findExisting: duplicates seen in October 2026 (Diljit Dosanjh, Delhi)"
     const a = delhi(1, "2026-11-01");
     expect(findExisting({ artistId: 7, city: "TBA", date: "2026-11-01" }, [a])).toBe(a);
     expect(findExisting({ artistId: 7, city: "TBA", date: "2026-11-02" }, [a])).toBeUndefined();
-    expect(findExisting({ artistId: 7, city: "TBA", date: null }, [a])).toBeUndefined();
+    // No city, no date: joins the artist's soonest known show; with none, it's new.
+    expect(findExisting({ artistId: 7, city: "TBA", date: null }, [a])).toBe(a);
+    expect(findExisting({ artistId: 7, city: "TBA", date: null }, [])).toBeUndefined();
   });
 
   it("a rescheduled date joins the same show; a second night without that wording stays separate", () => {
