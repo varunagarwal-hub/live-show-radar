@@ -45,7 +45,9 @@ export function telegramClient(botToken: string): TelegramSink & { call(method: 
     async sendMessage(chatId, html, opts = {}) {
       // Captions are capped at 1024 characters; longer alerts, and photos Telegram can't fetch,
       // go out as plain text instead.
-      if (opts.photo && html.length <= 1024) {
+      // Telegram counts the caption's visible text, not the HTML around it (link addresses).
+      const visible = html.replace(/<[^>]+>/g, "").replace(/&(lt|gt|amp|quot|#39);/g, "_");
+      if (opts.photo && visible.length <= 1024) {
         try {
           const p = TgMessage.parse(
             await call("sendPhoto", {

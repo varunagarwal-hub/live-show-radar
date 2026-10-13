@@ -8,21 +8,24 @@ export interface RetryOptions {
 }
 
 export class HttpError extends Error {
+  readonly url: string;
   constructor(
     readonly status: number,
-    readonly url: string,
+    url: string,
     readonly body: string,
     readonly retryAfterMs?: number,
   ) {
     super(`HTTP ${status} for ${redactUrl(url)}`);
+    // Kept redacted too: a printed error object shows its properties.
+    this.url = redactUrl(url);
   }
 }
 
-/** Strip query strings so tokens and keys never reach logs. */
+/** Strip query strings and Telegram's /bot<token>/ path so tokens and keys never reach logs. */
 export function redactUrl(url: string): string {
   try {
     const u = new URL(url);
-    return `${u.origin}${u.pathname}${u.search ? "?…" : ""}`;
+    return `${u.origin}${u.pathname.replace(/\/bot\d+:[\w-]+/, "/bot<token>")}${u.search ? "?…" : ""}`;
   } catch {
     return "<url>";
   }
