@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
 import { BottomNav, DesktopNav, SignOutButton, ThemeToggle } from "@/components/Chrome";
 import { Effects } from "@/components/Effects";
+import { CityPicker } from "@/components/CityPicker";
 import { Logo } from "@/components/Logo";
+import { radarConfig } from "@radar/config";
 import { getViewer } from "@/lib/auth";
 import { mastheadDate } from "@/lib/format";
 import "./globals.css";
@@ -64,7 +66,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="frame">
           <header className="masthead">
             {/* Their home city once signed in; before that, the whole country. */}
-            <Logo sub={`${viewer ? `${viewer.homeCity} & beyond` : "Live in India"} · ${mastheadDate()}`} />
+            <Logo
+              sub={`${viewer ? `${viewer.homeCity} & beyond` : "Live in India"} · ${mastheadDate()}`}
+              aside={viewer ? <CityPicker current={viewer.homeCity} cities={radarConfig.cities.map((c) => c.name)} /> : null}
+            />
             <DesktopNav isOwner={viewer?.isOwner ?? false} />
             <div className="masthead-tools">
               <ThemeToggle />

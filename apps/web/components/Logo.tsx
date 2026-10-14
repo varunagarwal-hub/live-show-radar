@@ -11,8 +11,8 @@ const WORDS = ["Early", "Access"];
  * perforation is punched in, the star pops, and the letters rise. Every so often the stub gives a
  * small wobble and a light glints across it, like a pass catching the stage lights.
  */
-export function Logo({ sub }: { sub: string }) {
-  const ref = useRef<HTMLAnchorElement>(null);
+export function Logo({ sub, aside }: { sub: string; aside?: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -36,23 +36,27 @@ export function Logo({ sub }: { sub: string }) {
   }, []);
 
   return (
-    <Link ref={ref} href="/" className="wordmark" aria-label="Early Access, home">
-      <svg className="logo-mark" viewBox="0 0 48 32" aria-hidden="true">
-        <defs>
-          <clipPath id="logo-clip">
-            <path d="M4 2h40a2 2 0 0 1 2 2v7a5 5 0 0 0 0 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a5 5 0 0 0 0-10V4a2 2 0 0 1 2-2z" />
-          </clipPath>
-        </defs>
-        {/* a ticket stub: notched sides, perforation, admit-one star */}
-        <path className="logo-body" d="M4 2h40a2 2 0 0 1 2 2v7a5 5 0 0 0 0 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a5 5 0 0 0 0-10V4a2 2 0 0 1 2-2z" />
-        <g clipPath="url(#logo-clip)">
-          <rect className="logo-glint" x="-6" y="-4" width="7" height="40" transform="skewX(-20)" opacity="0" />
-        </g>
-        <path className="logo-perf" d="M33 6v20" />
-        <path className="logo-star" d="M17 9l2.1 4.4 4.8.6-3.5 3.3.9 4.7-4.3-2.3-4.3 2.3.9-4.7-3.5-3.3 4.8-.6z" />
-      </svg>
+    // Only the ticket and the name link home; the line under them can hold a control (the city
+    // picker), which mustn't sit inside a link.
+    <div ref={ref} className="wordmark">
+      <Link href="/" className="logo-link" aria-label="Early Access, home">
+        <svg className="logo-mark" viewBox="0 0 48 32" aria-hidden="true">
+          <defs>
+            <clipPath id="logo-clip">
+              <path d="M4 2h40a2 2 0 0 1 2 2v7a5 5 0 0 0 0 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a5 5 0 0 0 0-10V4a2 2 0 0 1 2-2z" />
+            </clipPath>
+          </defs>
+          {/* a ticket stub: notched sides, perforation, admit-one star */}
+          <path className="logo-body" d="M4 2h40a2 2 0 0 1 2 2v7a5 5 0 0 0 0 10v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a5 5 0 0 0 0-10V4a2 2 0 0 1 2-2z" />
+          <g clipPath="url(#logo-clip)">
+            <rect className="logo-glint" x="-6" y="-4" width="7" height="40" transform="skewX(-20)" opacity="0" />
+          </g>
+          <path className="logo-perf" d="M33 6v20" />
+          <path className="logo-star" d="M17 9l2.1 4.4 4.8.6-3.5 3.3.9 4.7-4.3-2.3-4.3 2.3.9-4.7-3.5-3.3 4.8-.6z" />
+        </svg>
+      </Link>
       <span className="logo-text">
-        <span className="logo-name">
+        <Link href="/" className="logo-link logo-name" tabIndex={-1} aria-hidden="true">
           {WORDS.map((w, wi) => (
             <span key={w} className="logo-word">
               {wi > 0 && " "}
@@ -63,11 +67,14 @@ export function Logo({ sub }: { sub: string }) {
               ))}
             </span>
           ))}
+        </Link>
+        <span className="logo-sub-row">
+          <small className="logo-sub" suppressHydrationWarning>
+            {sub}
+          </small>
+          {aside}
         </span>
-        <small className="logo-sub" suppressHydrationWarning>
-          {sub}
-        </small>
       </span>
-    </Link>
+    </div>
   );
 }

@@ -35,19 +35,15 @@ export function DemoNotice({ username, password }: { username: string; password:
         <div className="notice-card">
           <p className="notice-tag">Soundcheck · test build</p>
           <h2 id="notice-title">Early Access is still in development</h2>
+          <p>Thanks for checking it out. This app is under development and in testing, so a few doors aren&apos;t open to everyone yet.</p>
           <p>
-            Thanks for checking it out. This app is under development and in testing, so a few doors aren&apos;t open to everyone yet.
+            The Spotify login is built and works, but Spotify allows only 5 accounts per app until a project is a registered business with about
+            250,000 users. For now, Spotify import is for invited testers (5 at most).
           </p>
           <p>
-            <b>Why not everyone can sign in with Spotify:</b> the Spotify login is built and works, but Spotify only allows 5 accounts per app until a
-            project becomes a registered business with about 250,000 users. So for now, Spotify import is for invited testers (5 at most).
-          </p>
-          <p>
-            <b>To explore the full app,</b> use the demo account. It runs on <b>live, real-time data</b>. Its artists aren&apos;t typed in by hand:
-            they&apos;re <b>fetched straight from the developer&apos;s own Spotify account</b> (the artists followed and listened to most, ranked
-            by how much they&apos;re played, re-synced every 6 hours). The shows are real ones announced in India by those artists, checked every
-            30 minutes from Instagram, news and ticketing sites, with real booking links and Telegram alerts. Nothing in it is sample or
-            made-up data.
+            The demo account below runs on live, real-time data. Its artists are fetched straight from the developer&apos;s own Spotify account
+            (followed and most-played, re-synced every 6 hours), and its shows are real ones announced in India, checked every 30 minutes, with
+            real booking links and Telegram alerts.
           </p>
           <dl className="notice-creds">
             <div>
