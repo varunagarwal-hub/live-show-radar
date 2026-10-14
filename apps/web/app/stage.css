@@ -2107,3 +2107,78 @@
   color: var(--pink);
   margin-bottom: 8px;
 }
+
+/* ---------- sideways strips: arrows and fades instead of a scrollbar ---------- */
+
+.scroll-strip {
+  position: relative;
+}
+.scroll-strip .strip {
+  scrollbar-width: none;
+  padding-bottom: 14px;
+}
+.scroll-strip .strip::-webkit-scrollbar {
+  display: none;
+}
+/* the edges fade into the page while there's more in that direction */
+.scroll-strip::before,
+.scroll-strip::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 14px;
+  width: 64px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.scroll-strip::before {
+  left: calc(var(--gutter) * -1);
+  background: linear-gradient(to right, var(--paper), transparent);
+}
+.scroll-strip::after {
+  right: calc(var(--gutter) * -1);
+  background: linear-gradient(to left, var(--paper), transparent);
+}
+.scroll-strip.fade-start::before,
+.scroll-strip.fade-end::after {
+  opacity: 1;
+}
+.strip-nav {
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.strip-nav .sc-btn {
+  pointer-events: auto;
+  box-shadow: 3px 3px 0 var(--pink);
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.strip-nav .sc-btn:first-child {
+  margin-left: -8px;
+}
+.strip-nav .sc-btn:last-child {
+  margin-right: -8px;
+}
+.strip-nav .sc-btn:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+.strip-nav .sc-btn:active {
+  transform: scale(0.94);
+}
+/* Touch screens swipe; the arrows are for mouse and keyboard. */
+@media (hover: none) {
+  .strip-nav {
+    display: none;
+  }
+}
+/* Snap cards to the page margin, so an unscrolled strip really sits at the start. */
+.scroll-strip .strip {
+  scroll-padding-inline: var(--gutter);
+}

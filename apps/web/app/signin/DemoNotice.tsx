@@ -43,9 +43,11 @@ export function DemoNotice({ username, password }: { username: string; password:
             project becomes a registered business with about 250,000 users. So for now, Spotify import is for invited testers (5 at most).
           </p>
           <p>
-            <b>To explore the full app,</b> use the demo account. It runs on <b>live, real-time data</b>: real shows announced in India by the
-            artists on this watchlist, checked every 30 minutes from Instagram, news and ticketing sites, with real booking links and Telegram
-            alerts. Nothing in it is sample or made-up data.
+            <b>To explore the full app,</b> use the demo account. It runs on <b>live, real-time data</b>. Its artists aren&apos;t typed in by hand:
+            they&apos;re <b>fetched straight from the developer&apos;s own Spotify account</b> (the artists followed and listened to most, ranked
+            by how much they&apos;re played, re-synced every 6 hours). The shows are real ones announced in India by those artists, checked every
+            30 minutes from Instagram, news and ticketing sites, with real booking links and Telegram alerts. Nothing in it is sample or
+            made-up data.
           </p>
           <dl className="notice-creds">
             <div>

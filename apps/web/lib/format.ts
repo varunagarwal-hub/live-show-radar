@@ -9,10 +9,26 @@ const CODES: Record<string, string> = {
   Hyderabad: "HYD",
   Kolkata: "KOL",
   Goa: "GOA",
+  // Tour stops beyond the configured cities, in their usual short forms.
+  Ahmedabad: "AMD",
+  Guwahati: "GAU",
+  Indore: "IDR",
+  Ranchi: "RNC",
+  Bhubaneswar: "BBS",
+  Jaipur: "JAI",
+  Lucknow: "LKO",
+  Chandigarh: "CHD",
+  Kochi: "COK",
+  Rishikesh: "RSK",
+  Shillong: "SHL",
+  Surat: "SRT",
+  Nagpur: "NAG",
+  Visakhapatnam: "VIZ",
+  Dubai: "DXB",
 };
 
 export function cityCode(city: string): string {
-  return CODES[city] ?? city.replace(/[^A-Za-z]/g, "").slice(0, 4).toUpperCase();
+  return CODES[city] ?? city.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
 }
 
 const tz = "Asia/Kolkata";

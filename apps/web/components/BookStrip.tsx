@@ -1,6 +1,7 @@
 import type { ShowCard } from "@/lib/data";
 import { cityCode, DEADLINE_LABEL, shortWhen, stubDate } from "@/lib/format";
 import { TicketButton } from "./ActionButtons";
+import { ScrollStrip } from "./ScrollStrip";
 
 /** One line on where the tickets stand. */
 function status(s: ShowCard): string {
@@ -16,9 +17,9 @@ function status(s: ShowCard): string {
  */
 export function BookStrip({ shows }: { shows: ShowCard[] }) {
   return (
-    <ul className="strip book-strip">
+    <ScrollStrip label="shows to book" className="book-strip">
       {shows.map((s) => (
-        <li key={s.id} className={`book-card${s.isHome ? " home" : " away"}`}>
+        <div key={s.id} className={`book-card${s.isHome ? " home" : " away"}`}>
           <div className="book-card-top">
             <span className={`city-code ${s.isHome ? "home" : "away"}`}>{cityCode(s.city)}</span>
             <b>{s.date ? stubDate(s.date, s.endDate) : "Date TBA"}</b>
@@ -28,8 +29,8 @@ export function BookStrip({ shows }: { shows: ShowCard[] }) {
           <span className="book-card-venue">{[s.venue, s.city].filter(Boolean).join(", ")}</span>
           <span className="book-card-status">{status(s)}</span>
           <TicketButton href={s.ticketUrl ?? s.searchUrl} label="Tickets" sub={s.ticketUrl ? "Book now" : "Search"} />
-        </li>
+        </div>
       ))}
-    </ul>
+    </ScrollStrip>
   );
 }

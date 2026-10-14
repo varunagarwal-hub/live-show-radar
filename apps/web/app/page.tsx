@@ -4,6 +4,7 @@ import { BookStrip } from "@/components/BookStrip";
 import { DealIn } from "@/components/DealIn";
 import { Marquee } from "@/components/Marquee";
 import { StageCarousel } from "@/components/StageCarousel";
+import { ScrollStrip } from "@/components/ScrollStrip";
 import { Stub } from "@/components/Stub";
 import { requireUser } from "@/lib/auth";
 import { loadHome, type ShowCard } from "@/lib/data";
@@ -47,11 +48,11 @@ export default async function NextUp() {
           <h2 id="closing" className="section-title">
             Closing soon <span className="count">next 72 hours</span>
           </h2>
-          <div className="strip">
+          <ScrollStrip label="closing shows">
             {closingSoon.map((s) => (
               <Stub key={s.id} show={s} mini emphasis="closing" />
             ))}
-          </div>
+          </ScrollStrip>
         </section>
       )}
 
