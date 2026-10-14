@@ -6,9 +6,10 @@ import { after } from "next/server";
 import { z } from "zod";
 import { setDecision } from "@radar/core";
 import { followArtist, refreshArtistGlobals } from "@radar/core/db/people";
-import { artists, follows, watchedAccounts } from "@radar/core/db/schema";
+import { artists, decisions, follows, watchedAccounts } from "@radar/core/db/schema";
 import { requireOwner, requireUser } from "./auth";
 import { getDb } from "./db";
+import { findBookingPageNow } from "./booking-lookup";
 import { ensurePlaylistForEvent } from "./playlist";
 
 const DecisionInput = z.object({ eventId: z.coerce.number().int().positive(), status: z.enum(["going", "maybe", "pass", "not_interested"]) });
@@ -19,14 +20,30 @@ export async function decideAction(eventId: number, status: "going" | "maybe" | 
   const input = DecisionInput.parse({ eventId, status });
   const h = await getDb();
   const ok = await setDecision(h, input.eventId, input.status, "dashboard", new Date(), v.id);
-  // Pre-show playlists are made in the owner's Spotify, so only for the owner.
-  if (ok && v.isOwner && input.status === "going") after(() => ensurePlaylistForEvent(input.eventId).catch(() => {}));
+  if (ok && input.status === "going") {
+    // Every Going show gets its booking page looked up straight away.
+    after(() => findBookingPageNow(input.eventId).catch(() => {}));
+    // Pre-show playlists are made in the owner's Spotify, so only for the owner.
+    if (v.isOwner) after(() => ensurePlaylistForEvent(input.eventId).catch(() => {}));
+  }
   // No revalidatePath here: the stub keeps its stamp until you navigate (pages are dynamic and
   // refetch then). Revalidating would yank a just-decided stub off the Decide page mid-animation.
   return { ok };
 }
 
 const id = z.coerce.number().int().positive();
+
+/** "Got tickets ✓" on a Going show (or undo), for the signed-in person. */
+export async function setTicketsBookedAction(eventId: number, booked: boolean): Promise<{ ok: boolean }> {
+  const v = await requireUser();
+  const { db } = await getDb();
+  const rows = await db
+    .update(decisions)
+    .set({ ticketsBookedAt: booked ? new Date() : null })
+    .where(and(eq(decisions.userId, v.id), eq(decisions.eventId, id.parse(eventId)), eq(decisions.status, "going")))
+    .returning({ e: decisions.eventId });
+  return { ok: rows.length > 0 };
+}
 
 const ArtistInput = z.object({
   id,

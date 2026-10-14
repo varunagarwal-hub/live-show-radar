@@ -186,6 +186,8 @@ export const decisions = pgTable(
     decidedAt: ts("decided_at").notNull().defaultNow(),
     /** "telegram" | "dashboard" */
     via: text().notNull(),
+    /** Set when this person says they have tickets (Decide → Book your tickets). */
+    ticketsBookedAt: ts("tickets_booked_at"),
   },
   (t) => [primaryKey({ columns: [t.userId, t.eventId] })],
 );

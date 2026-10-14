@@ -1,0 +1,1 @@
+ALTER TABLE "decisions" ADD COLUMN "tickets_booked_at" timestamp with time zone;

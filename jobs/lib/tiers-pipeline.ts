@@ -248,16 +248,19 @@ export async function runTiers(d: TiersDeps) {
  */
 async function lookUpBookingPages(d: TiersDeps, snapshot: Snapshot, today: string, stats: Record<string, number>, db: () => Promise<DbHandle>): Promise<number> {
   const now = d.now.getTime();
-  const rank = (e: SnapshotEvent) => (e.decision === "going" ? 0 : e.decision === "maybe" ? 1 : e.urgency === "urgent" ? 2 : 3);
+  // Anyone going (the owner or a member) makes a show a must-have: searched first, even while
+  // it's still a "possible" show, and retried until a booking page turns up.
+  const goingBy = (e: SnapshotEvent) => e.decision === "going" || snapshot.members.some((m) => m.decisions[String(e.id)] === "going");
+  const maybeBy = (e: SnapshotEvent) => e.decision === "maybe" || snapshot.members.some((m) => m.decisions[String(e.id)] === "maybe");
+  const rank = (e: SnapshotEvent) => (goingBy(e) ? 0 : maybeBy(e) ? 1 : e.urgency === "urgent" ? 2 : 3);
   const due = snapshot.upcoming
     .filter(
       (e) =>
         !e.ticketUrl &&
         !e.bookingUrl &&
         e.city !== "TBA" &&
-        e.urgency !== "possible" &&
-        e.decision !== "pass" &&
-        e.decision !== "not_interested" &&
+        (e.urgency !== "possible" || goingBy(e)) &&
+        ((e.decision !== "pass" && e.decision !== "not_interested") || goingBy(e)) &&
         (!e.date || e.date >= today) &&
         (!e.bookingCheckedAt || now - Date.parse(e.bookingCheckedAt) >= BIO_RECHECK_HOURS * HOUR),
     )
@@ -291,9 +294,12 @@ async function lookUpBookingPages(d: TiersDeps, snapshot: Snapshot, today: strin
     const lastSearch = d.state.cursors[searchKey];
     const [day, used] = (d.state.cursors["booksearch:day"] ?? "").split("|");
     const usedToday = day === today ? Number(used) || 0 : 0;
-    // Only for shows Karan is going to, might go to, or that are urgent: the rest keep the plain search.
-    const worthSearching = e.decision === "going" || e.decision === "maybe" || e.urgency === "urgent";
-    if (!url && search && worthSearching && searches < SEARCHES_PER_RUN && usedToday < SEARCHES_PER_DAY && (!lastSearch || now - Date.parse(lastSearch) >= SEARCH_RECHECK_HOURS * HOUR)) {
+    // Only for shows someone is going to, might go to, or that are urgent: the rest keep the plain
+    // search. Going shows retry twice as often until a booking page is found.
+    const going = goingBy(e);
+    const worthSearching = going || maybeBy(e) || e.urgency === "urgent";
+    const recheck = (going ? SEARCH_RECHECK_HOURS / 2 : SEARCH_RECHECK_HOURS) * HOUR;
+    if (!url && search && worthSearching && searches < SEARCHES_PER_RUN && usedToday < SEARCHES_PER_DAY && (!lastSearch || now - Date.parse(lastSearch) >= recheck)) {
       searches++;
       d.state.cursors[searchKey] = d.now.toISOString();
       d.state.cursors["booksearch:day"] = `${today}|${usedToday + 1}`;

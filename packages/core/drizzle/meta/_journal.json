@@ -36,6 +36,13 @@
       "when": 1791870597049,
       "tag": "0004_multi_user",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791952479575,
+      "tag": "0005_tickets_booked",
+      "breakpoints": true
     }
   ]
 }

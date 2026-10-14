@@ -67,6 +67,8 @@ const VERCEL_VARS = [
   // Username + password sign-in to the owner's dashboard (pnpm secrets login).
   "LOGIN_USERNAME",
   "LOGIN_PASSWORD_HASH",
+  // Shown publicly in the demo notice on the sign-in page (owner's choice).
+  "LOGIN_PASSWORD",
 ];
 const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32, TOKEN_ENC_KEY: 32 } as const;
 
@@ -216,7 +218,9 @@ if (cmd === "set" && names.includes("--clipboard")) {
   writeEnv(updates);
   console.log(Object.keys(updates).length ? `Generated: ${Object.keys(updates).join(", ")}` : "All random secrets already exist.");
 } else if (cmd === "push-vercel") {
-  // Uses the Vercel CLI's own login and the project linked in .vercel/project.json.
+  // Uses the Vercel CLI's own login and the project linked in .vercel/project.json. Its access
+  // token expires within hours; any CLI command refreshes it, so run a harmless one first.
+  spawnSync("npx vercel whoami", { shell: true, stdio: "ignore", timeout: 60_000 });
   const home = homedir();
   const authFile = [
     process.env.APPDATA && join(process.env.APPDATA, "com.vercel.cli/Data/auth.json"),

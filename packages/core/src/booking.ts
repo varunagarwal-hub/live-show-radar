@@ -142,6 +142,9 @@ const SearchAnswer = (raw: string): { url: string | null; date: string | null } 
   }
 };
 
+/** Tour stops beyond the configured cities, to recognise another city's page of the same tour. */
+const TOUR_CITIES = ["ahmedabad", "jaipur", "lucknow", "indore", "chandigarh", "kochi", "guwahati", "shillong", "surat", "vadodara", "nagpur", "bhopal", "visakhapatnam", "coimbatore", "dubai"];
+
 /** Artist-name words that must appear in a searched link (skips short words like "DJ", "A.R."). */
 function artistWords(name: string): string[] {
   return norm(name)
@@ -151,15 +154,24 @@ function artistWords(name: string): string[] {
 }
 
 /**
- * Whether a searched link is believable for this show: an event page that names the artist
- * (or the city, for festival pages listing the artist) and the city.
+ * Whether a searched link is believable for this show. Always an event page on an Indian
+ * ticketing site; then either its address names both the artist and the city, or it names one
+ * of them and the page's date (as the search reported it) matches the show. The second case
+ * covers tour pages with a city picker (Diljit's Aura tour on BookMyShow) and festival pages that
+ * don't name every act.
  */
-export function plausibleSearchedLink(show: BookingShow, url: string): boolean {
+export function plausibleSearchedLink(show: BookingShow, url: string, pageDate: string | null = null): boolean {
   if (!isEventPageUrl(url) || show.city === "TBA") return false;
   const t = norm(url.replace(/[?#].*$/, ""));
-  const artist = artistWords(show.artistName);
-  const cities = cityWords(show.city);
-  return artist.some((w) => t.includes(` ${w} `)) && cities.some((w) => t.includes(` ${w} `));
+  const named = artistWords(show.artistName).some((w) => t.includes(` ${w} `));
+  const inCity = cityWords(show.city).some((w) => t.includes(` ${w} `));
+  if (named && inCity) return true;
+  // A page for another city of the same tour is never this show, whatever the date says.
+  const own = new Set(cityWords(show.city));
+  const others = [...radarConfig.cities.flatMap((c) => cityWords(c.name)), ...TOUR_CITIES];
+  if (others.some((w) => !own.has(w) && t.includes(` ${w} `))) return false;
+  const sameDate = !!show.date && !!pageDate && /^\d{4}-\d\d-\d\d$/.test(pageDate) && Math.abs(Date.parse(pageDate) - Date.parse(show.date)) <= 3 * 86_400_000;
+  return (named || inCity) && sameDate;
 }
 
 /**
@@ -183,8 +195,10 @@ export async function searchBookingUrl(apiKey: string, show: BookingShow, model 
           content:
             "You find the official ticket booking page for one concert in India. Always use the browser_search tool first, then answer in plain text with JSON only: " +
             '{"url": string|null, "event_date": "YYYY-MM-DD"|null}. url must be the event\'s own page on an Indian ticketing site ' +
-            "(BookMyShow, District, Skillboxes, Thumpn, Zomato Live…), copied exactly from a search result, for this exact city and date. " +
-            "Never a home, city, search or artist page, never a news article, never a past year's event, never a guess. If unsure, url is null.",
+            "(BookMyShow, District, Skillboxes, thumpN, Zomato Live…), copied exactly from a search result, for this exact city and date; " +
+            "event_date is the date that page or result gives. Tours are often sold by one platform only: check news of the tour's ticketing partner and the " +
+            "artist's official website, which links to the booking page. A festival's page counts if the artist is on its lineup. " +
+            "Never a home, city, search or artist page, never a news article or resale site, never a past year's event, never a guess. If unsure, url is null.",
         },
         { role: "user", content: `${show.artistName}, ${show.city}, ${when}` },
       ],
@@ -199,7 +213,7 @@ export async function searchBookingUrl(apiKey: string, show: BookingShow, model 
   const text = res.ok ? (body.choices?.[0]?.message?.content ?? "") : body.error?.code === "tool_use_failed" ? (body.error.failed_generation ?? "").replace(/^[\s\S]*?"arguments":\s*/, "") : null;
   if (text === null) throw new Error(`groq ${res.status}: ${body.error?.message?.slice(0, 200) ?? "no answer"}`);
   const { url, date } = SearchAnswer(text);
-  if (!url || !plausibleSearchedLink(show, url)) return null;
+  if (!url || !plausibleSearchedLink(show, url, date)) return null;
   // A different date means a different show, except a reschedule by a few days (same page).
   if (show.date && date && /^\d{4}-\d\d-\d\d$/.test(date) && Math.abs(Date.parse(date) - Date.parse(show.date)) > 3 * 86_400_000) return null;
   return url;

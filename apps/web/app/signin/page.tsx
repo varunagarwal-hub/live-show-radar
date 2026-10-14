@@ -5,6 +5,7 @@ import { BackstagePass } from "./BackstagePass";
 import { SignInButton } from "./SignInButton";
 import { DemoVideo } from "./DemoVideo";
 import { PasswordLogin } from "./PasswordLogin";
+import { DemoNotice } from "./DemoNotice";
 import { DEMO_VIDEO } from "@/lib/demo";
 import { passwordLoginEnabled } from "@/lib/password-login";
 
@@ -44,8 +45,10 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
           {DEMO_VIDEO && <DemoVideo src={DEMO_VIDEO.src} poster={DEMO_VIDEO.poster} />}
         </div>
         {passwordLoginEnabled() && (
-          <div className="si-rise">
+          <div className="si-rise si-actions">
             <PasswordLogin />
+            {/* The shared demo login, shown publicly on purpose (LOGIN_PASSWORD on Vercel). */}
+            {process.env.LOGIN_PASSWORD && <DemoNotice username={process.env.LOGIN_USERNAME!} password={process.env.LOGIN_PASSWORD} />}
           </div>
         )}
         <p className="si-rise si-small">

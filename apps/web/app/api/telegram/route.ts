@@ -2,6 +2,8 @@ import { after, NextResponse } from "next/server";
 import { radarConfig } from "@radar/config";
 import { handleUpdate, llmFromEnv, parseAllowedChats, telegramClient } from "@radar/core";
 import { getDb } from "@/lib/db";
+import { OWNER_USER_ID } from "@radar/core/db/schema";
+import { findBookingPageNow } from "@/lib/booking-lookup";
 import { ensurePlaylistForEvent } from "@/lib/playlist";
 import { secretMatches } from "@/lib/secrets";
 
@@ -33,7 +35,11 @@ export async function POST(req: Request) {
       tg: telegramClient(token),
       allowedChats: allowed,
       llm: () => llmFromEnv(process.env),
-      onGoing: async (eventId) => after(() => ensurePlaylistForEvent(eventId).catch((e) => console.error(`playlist ${eventId}: ${(e as Error).message}`))),
+      onGoing: async (eventId, userId) => {
+        after(() => findBookingPageNow(eventId).catch(() => {}));
+        // Pre-show playlists live in the owner's Spotify.
+        if (userId === OWNER_USER_ID && radarConfig.features.playlists) after(() => ensurePlaylistForEvent(eventId).catch((e) => console.error(`playlist ${eventId}: ${(e as Error).message}`)));
+      },
       log: (m) => console.log(m),
     });
   } catch (err) {

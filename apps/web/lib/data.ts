@@ -39,6 +39,8 @@ export interface ShowCard {
   /** Found only by a low-confidence source; worth checking before buying. */
   unconfirmed: boolean;
   decision: "going" | "maybe" | "pass" | "not_interested" | null;
+  /** They said they have tickets (Decide → Book your tickets). */
+  ticketsBooked: boolean;
   deadline: { at: string; kind: "early_bird_closes" | "early_bird_opens" | "sale_starts" } | null;
   soldOut: boolean;
   playlistUrl: string | null;
@@ -131,7 +133,7 @@ export async function loadShows(v: Viewer, q: ShowQuery = {}, now = new Date()):
     conds.push(or(st.length ? inArray(decisions.status, st) : undefined, q.decisions.includes("undecided") ? isNull(decisions.status) : undefined)!);
   }
   const rows = await db
-    .select({ e: events, a: artists, tier, decision: decisions.status, playlist: playlists.url })
+    .select({ e: events, a: artists, tier, decision: decisions.status, booked: decisions.ticketsBookedAt, playlist: playlists.url })
     .from(events)
     .innerJoin(artists, eq(events.artistId, artists.id))
     .leftJoin(decisions, and(eq(decisions.eventId, events.id), eq(decisions.userId, v.id)))
@@ -147,7 +149,7 @@ export async function loadShows(v: Viewer, q: ShowQuery = {}, now = new Date()):
     rows.map((r) => ({ id: r.e.id, artistName: r.a.name, city: r.e.city, date: r.e.date, endDate: r.e.endDate, decision: r.decision })),
     busy,
   );
-  return rows.map(({ e, a, tier: myTier, decision, playlist }) => {
+  return rows.map(({ e, a, tier: myTier, decision, booked, playlist }) => {
     const d = decideByDeadline(e, now);
     const home = sameCity(e.city, v.homeCity);
     return {
@@ -174,6 +176,7 @@ export async function loadShows(v: Viewer, q: ShowQuery = {}, now = new Date()):
       urgency: e.urgency,
       unconfirmed: e.status === "possible",
       decision: decision ?? null,
+      ticketsBooked: decision === "going" && booked !== null,
       deadline: d ? { at: d.at.toISOString(), kind: d.kind } : null,
       soldOut: e.tiers.length > 0 && e.tiers.every((t) => t.status === "sold_out"),
       // Pre-show playlists are private ones in the owner's Spotify: only the owner can open them.

@@ -39,6 +39,8 @@ export const EnvSchema = z.object({
   /** Optional username + password sign-in to the owner's dashboard (hash from pnpm secrets login). */
   LOGIN_USERNAME: z.string().min(3).optional(),
   LOGIN_PASSWORD_HASH: z.string().startsWith("scrypt$").optional(),
+  /** The same password in plain text, shown in the public demo notice when set. */
+  LOGIN_PASSWORD: z.string().min(8).optional(),
   RADAR_DRY_RUN: z.string().optional(),
   RADAR_STATE_DIR: z.string().default(".radar-state"),
 });

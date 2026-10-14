@@ -54,6 +54,8 @@ const shots = [
   { name: "signin-desktop", path: "/signin", width: 1536, height: 900, mobile: false, scheme: "light" },
   { name: "signin-mobile-dark", path: "/signin", width: 390, height: 844, mobile: true, scheme: "dark" },
   { name: "home-desktop-more", path: "/", width: 1536, height: 900, mobile: false, scheme: "light", click: ".more-trigger" },
+  { name: "decide-desktop", path: "/decide", width: 1536, height: 900, mobile: false, scheme: "light" },
+  { name: "decide-mobile", path: "/decide", width: 390, height: 844, mobile: true, scheme: "dark" },
   { name: "health-desktop", path: "/health", width: 1536, height: 900, mobile: false, scheme: "light" },
 ] as const;
 

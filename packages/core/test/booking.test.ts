@@ -98,3 +98,24 @@ describe("searched links", () => {
     expect(plausibleSearchedLink(diljit, "https://in.bookmyshow.com/explore/home/national-capital-region-ncr")).toBe(false);
   });
 });
+
+describe("searched links: tour and festival pages", () => {
+  const blr = { artistName: "Diljit Dosanjh", city: "Bengaluru", date: "2026-11-29" };
+  const tour = "https://in.bookmyshow.com/events/diljit-dosanjh-rupay-aura-india-tour/etgq32rofi";
+  it("accepts a tour page with a city picker only when the search found it for this date", () => {
+    expect(plausibleSearchedLink(blr, tour, "2026-11-29")).toBe(true);
+    expect(plausibleSearchedLink(blr, tour, null)).toBe(false);
+    expect(plausibleSearchedLink(blr, tour, "2026-12-05")).toBe(false);
+  });
+  it("accepts a festival page in the right city on the right date", () => {
+    const nucleya = { artistName: "Nucleya", city: "Bengaluru", date: "2026-11-28" };
+    expect(plausibleSearchedLink(nucleya, "https://www.district.in/events/festival-of-sound-and-speed-bengaluru-buy-tickets", "2026-11-28")).toBe(true);
+  });
+  it("never accepts another city's page of the same tour, even with a matching date", () => {
+    expect(plausibleSearchedLink(blr, "https://in.bookmyshow.com/events/diljit-dosanjh-aura-india-tour-2026-ahmedabad/et42470qp8", "2026-11-29")).toBe(false);
+  });
+  it("accepts thumpN event pages", () => {
+    const arijit = { artistName: "Arijit Singh", city: "Bengaluru", date: "2027-03-13" };
+    expect(plausibleSearchedLink(arijit, "https://thumpn.com/event/5BQNKL/arijit-singh-india-tour-bengaluru")).toBe(true);
+  });
+});

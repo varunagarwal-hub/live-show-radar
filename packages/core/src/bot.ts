@@ -28,8 +28,8 @@ export interface BotDeps {
   tg: TelegramSink;
   allowedChats: Set<string>;
   llm: () => Llm;
-  /** Called after a "Going" decision (pre-show playlist). Runs after the reply is sent. */
-  onGoing?: (eventId: number) => Promise<void>;
+  /** Called after a "Going" decision with who decided (pre-show playlist, booking-page lookup). */
+  onGoing?: (eventId: number, userId: number) => Promise<void>;
   now?: Date;
   log?: (m: string) => void;
 }
@@ -118,7 +118,7 @@ export async function handleUpdate(raw: unknown, d: BotDeps): Promise<"ignored" 
         const ok = await setDecision(d.h, cb.eventId, cb.status, "telegram", now, userId);
         await d.tg.answerCallback(cq.id, ok ? `Marked ${DECISION_TEXT[cb.status]}` : "That show is gone.");
         if (ok && cq.message) await d.tg.editKeyboard(chatId, cq.message.message_id, markChosen(cb.eventId, cb.status)).catch(() => {});
-        if (ok && isOwner && cb.status === "going" && d.onGoing && radarConfig.features.playlists) await d.onGoing(cb.eventId).catch((e) => d.log?.(`playlist: ${(e as Error).message}`));
+        if (ok && cb.status === "going" && d.onGoing) await d.onGoing(cb.eventId, userId).catch((e) => d.log?.(`after going: ${(e as Error).message}`));
         return "handled";
       }
       case "wrong_artist": {
