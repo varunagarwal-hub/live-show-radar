@@ -37,8 +37,17 @@ export function DemoNotice({ username, password }: { username: string; password:
           <h2 id="notice-title">Early Access is still in development</h2>
           <p>Thanks for checking it out. This app is under development and in testing, so a few doors aren&apos;t open to everyone yet.</p>
           <p>
-            The Spotify login is built and works, but Spotify allows only 5 accounts per app until a project is a registered business with about
-            250,000 users. For now, Spotify import is for invited testers (5 at most).
+            The Spotify login is built and works, but an app in Spotify&apos;s development mode can be used by up to 5 Spotify accounts. Since 15 May
+            2025, Spotify only grants wider access to organisations (not individuals): a legally registered business with a launched service and
+            at least 250,000 monthly active users (
+            <a href="https://developer.spotify.com/documentation/web-api/concepts/quota-modes" target="_blank" rel="noopener noreferrer">
+              Spotify for Developers, quota modes
+            </a>
+            ; announced{" "}
+            <a href="https://developer.spotify.com/blog/2025-04-15-updating-the-criteria-for-web-api-extended-access" target="_blank" rel="noopener noreferrer">
+              15 April 2025
+            </a>
+            ). For now, Spotify import is for invited testers (5 at most).
           </p>
           <p>
             The demo account below runs on live, real-time data. Its artists are fetched straight from the developer&apos;s own Spotify account

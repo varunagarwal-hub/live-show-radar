@@ -44,7 +44,7 @@ export function CityPicker({ current, cities }: { current: string; cities: strin
   return (
     <span ref={wrap} className="city-picker">
       <button type="button" className="city-change" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((o) => !o)} disabled={pending}>
-        {pending ? "Saving…" : "Change"}
+        {pending ? "Saving…" : "Change city"}
       </button>
       {open && (
         <div ref={panel} className="city-panel" role="menu" aria-label="Home city">

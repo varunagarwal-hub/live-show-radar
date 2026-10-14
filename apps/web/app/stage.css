@@ -2301,3 +2301,9 @@
 .notice-actions .si-btn .tb-main {
   font-size: 1.3rem;
 }
+.notice-card a {
+  color: inherit;
+  text-decoration-color: var(--pink);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
