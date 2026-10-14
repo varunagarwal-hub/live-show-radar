@@ -2063,3 +2063,47 @@
     white-space: nowrap;
   }
 }
+
+/* ---------- Next up: still-to-book cards ---------- */
+
+.book-strip {
+  list-style: none;
+}
+.book-card {
+  scroll-snap-align: start;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  justify-items: start;
+  padding: 14px 16px 16px;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--blue);
+}
+.book-card.away {
+  box-shadow: 5px 5px 0 var(--pink);
+}
+.book-card-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--display);
+  font-size: 1.1rem;
+}
+.book-card-artist {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.6rem;
+  line-height: 1;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.book-card-venue {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+.book-card-status {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pink);
+  margin-bottom: 8px;
+}

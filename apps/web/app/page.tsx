@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { radarConfig } from "@radar/config";
+import { BookStrip } from "@/components/BookStrip";
 import { DealIn } from "@/components/DealIn";
 import { Marquee } from "@/components/Marquee";
 import { StageCarousel } from "@/components/StageCarousel";
@@ -23,6 +24,7 @@ export default async function NextUp() {
   const v = await requireUser();
   if (!radarConfig.features.dashboard) return <p className="empty">The dashboard is switched off. Telegram alerts still work.</p>;
   const { goingNext, closingSoon, decide, recent, total } = await loadHome(v);
+  const toBook = goingNext.filter((s) => !s.ticketsBooked);
 
   return (
     <>
@@ -39,35 +41,33 @@ export default async function NextUp() {
         </section>
       )}
 
-      <section className="section" aria-labelledby="closing">
-        <h2 id="closing" className="section-title">
-          Closing soon <span className="count">next 72 hours</span>
-        </h2>
-        {closingSoon.length ? (
+      {/* Only when something actually closes in the next 72 hours. */}
+      {closingSoon.length > 0 && (
+        <section className="section" aria-labelledby="closing">
+          <h2 id="closing" className="section-title">
+            Closing soon <span className="count">next 72 hours</span>
+          </h2>
           <div className="strip">
             {closingSoon.map((s) => (
               <Stub key={s.id} show={s} mini emphasis="closing" />
             ))}
           </div>
-        ) : (
-          <p className="empty">No early-birds or sales closing in the next three days.</p>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section className="section" aria-labelledby="decide">
-        <h2 id="decide" className="section-title">
-          Decide by <Link href="/decide" className="count">see all</Link>
-        </h2>
-        {decide.length ? (
-          <DealIn className="stubs">
-            {decide.slice(0, 4).map((s) => (
-              <Stub key={s.id} show={s} emphasis="decide" />
-            ))}
-          </DealIn>
-        ) : (
-          <p className="empty">Nothing to decide right now. Maybe a show and it'll land here with its deadline.</p>
-        )}
-      </section>
+      {/* What needs doing: tickets still to buy for Going shows, then any Maybes with a
+          deadline. Hidden when there's nothing to act on, instead of an empty box. */}
+      {(toBook.length > 0 || decide.length > 0) && (
+        <section className="section" aria-labelledby="todo">
+          <h2 id="todo" className="section-title">
+            {toBook.length ? "Still to book" : "Decide by"}{" "}
+            <Link href="/decide" className="count">
+              {toBook.length ? `${toBook.length} without tickets · see all` : "see all"}
+            </Link>
+          </h2>
+          <BookStrip shows={[...toBook.slice(0, 8), ...decide.slice(0, 4)]} />
+        </section>
+      )}
 
       <section className="section" aria-labelledby="recent">
         <h2 id="recent" className="section-title">

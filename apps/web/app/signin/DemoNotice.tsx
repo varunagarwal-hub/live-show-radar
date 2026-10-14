@@ -4,12 +4,10 @@ import { signIn } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { gsap, prefersReducedMotion } from "@/components/motion";
 
-const SEEN_KEY = "ea-demo-notice-seen";
-
 /**
- * The "this is a test build" note shown the first time someone opens the site: why Spotify
- * sign-in is limited, and the shared demo login with a one-tap way in. Dismissed once per
- * browser; "About this demo" on the sign-in page brings it back.
+ * The "this is a test build" note that opens whenever someone lands on the sign-in page: why
+ * Spotify sign-in is limited, that the demo runs on live data, and the shared demo login with a
+ * one-tap way in. "About this demo" brings it back after it's closed.
  */
 export function DemoNotice({ username, password }: { username: string; password: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -22,19 +20,10 @@ export function DemoNotice({ username, password }: { username: string; password:
     d.showModal();
     if (!prefersReducedMotion()) gsap.fromTo(d.querySelector(".notice-card"), { y: 30, rotate: -3, opacity: 0 }, { y: 0, rotate: -1, opacity: 1, duration: 0.5, ease: "back.out(1.6)" });
   };
-  const close = () => {
-    try {
-      localStorage.setItem(SEEN_KEY, "1");
-    } catch {}
-    dialog.current?.close();
-  };
+  const close = () => dialog.current?.close();
 
   useEffect(() => {
-    let seen = false;
-    try {
-      seen = localStorage.getItem(SEEN_KEY) === "1";
-    } catch {}
-    if (!seen) open();
+    open();
   }, []);
 
   return (
@@ -54,7 +43,9 @@ export function DemoNotice({ username, password }: { username: string; password:
             project becomes a registered business with about 250,000 users. So for now, Spotify import is for invited testers (5 at most).
           </p>
           <p>
-            <b>To explore the full app,</b> use the demo account:
+            <b>To explore the full app,</b> use the demo account. It runs on <b>live, real-time data</b>: real shows announced in India by the
+            artists on this watchlist, checked every 30 minutes from Instagram, news and ticketing sites, with real booking links and Telegram
+            alerts. Nothing in it is sample or made-up data.
           </p>
           <dl className="notice-creds">
             <div>
@@ -80,9 +71,6 @@ export function DemoNotice({ username, password }: { username: string; password:
                 setBusy(true);
                 const r = await signIn("password", { username, password, redirect: false, callbackUrl: "/" });
                 if (r?.ok && !r.error) {
-                  try {
-                    localStorage.setItem(SEEN_KEY, "1");
-                  } catch {}
                   window.location.href = "/";
                 } else {
                   setBusy(false);
@@ -91,7 +79,7 @@ export function DemoNotice({ username, password }: { username: string; password:
               }}
             >
               <span className="tb-main">{busy ? "Opening…" : "Try it"}</span>
-              <span className="tb-sub">Log in with the demo account</span>
+              <span className="tb-sub">Open the live demo</span>
             </button>
             <button type="button" className="btn" onClick={close}>
               Look around first
