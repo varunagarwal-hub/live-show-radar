@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { ShowCard } from "@/lib/data";
 import { cityCode, daysToGo, stubDate } from "@/lib/format";
 import { BoardingPassButton, CassetteButton, InstagramButton, TicketButton, WristbandButton } from "./ActionButtons";
-import { gsap, prefersReducedMotion } from "./motion";
+import { gsap, prefersReducedMotion, whileVisible } from "./motion";
 import { SplitFlap } from "./SplitFlap";
 
 /** A halftone crowd: heads, shoulders and a few raised hands, printed in dots. */
@@ -46,6 +46,7 @@ export function Poster({ show, kicker = "Your next show", sameDay = false }: { s
   useEffect(() => {
     const el = stage.current;
     if (!el || prefersReducedMotion()) return;
+    const breathing: gsap.core.Tween[] = [];
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
       tl.fromTo(".spot-l", { rotate: -48, opacity: 0 }, { rotate: 14, opacity: 1, duration: 1.1 }, 0)
@@ -61,11 +62,18 @@ export function Poster({ show, kicker = "Your next show", sameDay = false }: { s
         .from(".stage-art", { rotate: -12, scale: 0.86, opacity: 0, duration: 0.7, ease: "back.out(1.6)" }, 0.3);
       // A slow push-in on the photo while it holds the stage.
       gsap.fromTo(".stage-art img", { scale: 1.12 }, { scale: 1, duration: 9, ease: "sine.out" });
-      // The lights keep breathing gently, like a stage between songs.
-      gsap.to(".spot-l", { rotate: 10, duration: 4, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2.6 });
-      gsap.to(".spot-r", { rotate: -10, duration: 4.6, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2.7 });
+      // The lights keep breathing gently, like a stage between songs, but only while the stage is
+      // on screen: scrolled away (or in a hidden tab) they hold still and cost nothing.
+      breathing.push(
+        gsap.to(".spot-l", { rotate: 10, duration: 4, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2.6 }),
+        gsap.to(".spot-r", { rotate: -10, duration: 4.6, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2.7 }),
+      );
     }, el);
-    return () => ctx.revert();
+    const stopWatching = whileVisible(el, (on) => breathing.forEach((t) => (on ? t.resume() : t.pause())));
+    return () => {
+      stopWatching();
+      ctx.revert();
+    };
   }, []);
 
   return (

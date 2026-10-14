@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, prefersReducedMotion } from "./motion";
+import { gsap, prefersReducedMotion, whileVisible } from "./motion";
 
 /**
  * A venue marquee: bulb-lit border, text scrolling forever. Hovering or focusing pauses it, and
@@ -15,13 +15,24 @@ export function Marquee({ items }: { items: string[] }) {
     if (!el || !items.length || prefersReducedMotion()) return;
     const tween = gsap.to(el, { xPercent: -50, ease: "none", duration: Math.max(18, items.join(" ").length / 4), repeat: -1 });
     const box = el.parentElement!;
-    const pause = () => tween.pause();
-    const play = () => tween.play();
+    let onScreen = true;
+    let hovered = false;
+    const sync = () => {
+      const run = onScreen && !hovered;
+      if (run) tween.play();
+      else tween.pause();
+      // The chasing bulbs are a CSS animation: pause them too while nobody can see them.
+      box.classList.toggle("is-idle", !onScreen);
+    };
+    const pause = () => ((hovered = true), sync());
+    const play = () => ((hovered = false), sync());
+    const stopWatching = whileVisible(box, (v) => ((onScreen = v), sync()));
     box.addEventListener("mouseenter", pause);
     box.addEventListener("mouseleave", play);
     box.addEventListener("focusin", pause);
     box.addEventListener("focusout", play);
     return () => {
+      stopWatching();
       tween.kill();
       box.removeEventListener("mouseenter", pause);
       box.removeEventListener("mouseleave", play);

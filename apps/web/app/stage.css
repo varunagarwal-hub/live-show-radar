@@ -2307,3 +2307,28 @@
   text-decoration-thickness: 2px;
   text-underline-offset: 2px;
 }
+
+/* ---------- performance: cheap spotlights, nothing animating off screen ---------- */
+
+/* The beams no longer blur (a blur on a moving layer repaints its whole area every frame);
+   their soft edge comes from the gradient instead, and each beam is its own GPU layer. */
+.spot {
+  filter: none;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.spot-l {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--blue) 80%, transparent), color-mix(in srgb, var(--blue) 10%, transparent) 78%, transparent);
+}
+.spot-r {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--pink) 70%, transparent), color-mix(in srgb, var(--pink) 8%, transparent) 78%, transparent);
+}
+.mq-track,
+.stage-art img,
+.sc-progress span {
+  will-change: transform;
+}
+/* The marquee's chasing bulbs stop while it's scrolled out of view. */
+.marquee.is-idle {
+  animation-play-state: paused;
+}

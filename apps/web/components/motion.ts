@@ -15,3 +15,23 @@ export { gsap, Draggable, ScrollTrigger };
  */
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" && (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.visibilityState !== "visible");
+
+/**
+ * Calls back whenever the element scrolls into or out of view (and when the tab is hidden), so
+ * never-ending animations (spotlights, marquee, carousel) stop costing anything off screen.
+ * Returns a cleanup function.
+ */
+export function whileVisible(el: Element, onChange: (visible: boolean) => void): () => void {
+  let inView = true;
+  const report = () => onChange(inView && document.visibilityState === "visible");
+  const io = new IntersectionObserver(([entry]) => {
+    inView = !!entry?.isIntersecting;
+    report();
+  });
+  io.observe(el);
+  document.addEventListener("visibilitychange", report);
+  return () => {
+    io.disconnect();
+    document.removeEventListener("visibilitychange", report);
+  };
+}

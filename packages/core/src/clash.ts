@@ -2,7 +2,7 @@ import ical, { type VEvent } from "node-ical";
 import { radarConfig } from "@radar/config";
 import { fetchText } from "./http";
 import { addDays, dateOnlyToUtcNoonIST, istInstant } from "./time";
-import { cityConfig } from "./cities";
+import { airportFor, cityConfig } from "./cities";
 
 export interface Busy {
   start: Date;
@@ -101,8 +101,8 @@ export function findClashes(shows: ClashShow[], busy: Busy[]): Map<number, Clash
 // NOTE: Google Flights has no documented deep-link API. The `?q=` natural-language search URL
 // is the closest working option; it opens a prefilled search the user can adjust.
 export function flightsSearchUrl(city: string, date: string, endDate?: string | null, home: string = radarConfig.homeCity): string | null {
-  const to = cityConfig(city)?.airport;
-  const from = cityConfig(home)?.airport;
+  const to = airportFor(city);
+  const from = airportFor(home);
   if (!to || !from || to === from) return null;
   const out = addDays(date, 0);
   const back = addDays(endDate ?? date, 1);

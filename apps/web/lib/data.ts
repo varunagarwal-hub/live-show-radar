@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { radarConfig } from "@radar/config";
-import { cityConfig, isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, istDate, addDays, normalizeCity, weekPart, type Busy, type Clash } from "@radar/core";
+import { airportFor, isBookingLikeUrl, ticketSearchUrl, decideByDeadline, fetchBusy, findClashes, flightsSearchUrl, istDate, addDays, normalizeCity, weekPart, type Busy, type Clash } from "@radar/core";
 import { followsArtist, mutedFor, tierFor } from "@radar/core/db/people";
 import { artists, decisions, events, eventSources, follows, jobRuns, playlists, sourceHealth, watchedAccounts } from "@radar/core/db/schema";
 import type { TierJson } from "@radar/core/db/schema";
@@ -107,8 +107,8 @@ async function busyTimes(now: Date): Promise<Busy[]> {
 
 /** The flight route from this person's home city, when the show is somewhere else. */
 function routeTo(home: string, city: string): { from: string; to: string } | null {
-  const from = cityConfig(home)?.airport;
-  const to = cityConfig(city)?.airport;
+  const from = airportFor(home);
+  const to = airportFor(city);
   return from && to && to !== from ? { from, to } : null;
 }
 

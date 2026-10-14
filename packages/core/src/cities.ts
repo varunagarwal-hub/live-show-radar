@@ -60,3 +60,47 @@ export function cityConfig(name: string | null | undefined): CityConfig | undefi
   const n = normalizeCity(name);
   return radarConfig.cities.find((c) => c.name === n);
 }
+
+/** Airports for tour stops beyond the configured cities (so they get a flight search too). */
+const MORE_AIRPORTS: Record<string, string> = {
+  ahmedabad: "AMD",
+  guwahati: "GAU",
+  indore: "IDR",
+  lucknow: "LKO",
+  jaipur: "JAI",
+  chandigarh: "IXC",
+  kochi: "COK",
+  cochin: "COK",
+  ranchi: "IXR",
+  bhubaneswar: "BBI",
+  shillong: "SHL",
+  surat: "STV",
+  vadodara: "BDQ",
+  nagpur: "NAG",
+  bhopal: "BHO",
+  visakhapatnam: "VTZ",
+  coimbatore: "CJB",
+  udaipur: "UDR",
+  amritsar: "ATQ",
+  dehradun: "DED",
+  rishikesh: "DED",
+  varanasi: "VNS",
+  patna: "PAT",
+  raipur: "RPR",
+  mangaluru: "IXE",
+  mangalore: "IXE",
+  thiruvananthapuram: "TRV",
+  trivandrum: "TRV",
+  madurai: "IXM",
+  srinagar: "SXR",
+  leh: "IXL",
+  dubai: "DXB",
+};
+
+/** The airport for a city: the configured one, else a known airport for other Indian tour stops. */
+export function airportFor(name: string | null | undefined): string | undefined {
+  const configured = cityConfig(name)?.airport;
+  if (configured) return configured;
+  const key = (name ?? "").trim().toLowerCase();
+  return MORE_AIRPORTS[key];
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ShowCard } from "@/lib/data";
-import { gsap, prefersReducedMotion } from "./motion";
+import { gsap, prefersReducedMotion, whileVisible } from "./motion";
 import { Poster } from "./Poster";
 
 const HOLD_SECONDS = 7;
@@ -24,6 +24,14 @@ export function StageCarousel({ shows }: { shows: ShowCard[] }) {
   const many = shows.length > 1;
 
   useEffect(() => setAutoplay(many && !prefersReducedMotion()), [many]);
+
+  // Scrolled out of view (or tab hidden): hold the rotation, like hovering does.
+  const [offscreen, setOffscreen] = useState(false);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    return whileVisible(el, (v) => setOffscreen(!v));
+  }, []);
 
   const go = useCallback(
     (next: number) => {
@@ -51,11 +59,11 @@ export function StageCarousel({ shows }: { shows: ShowCard[] }) {
     const el = bar.current;
     if (!el || !autoplay) return;
     const tween = gsap.fromTo(el, { scaleX: 0 }, { scaleX: 1, duration: HOLD_SECONDS, ease: "none", onComplete: () => go(index + 1) });
-    if (paused || hovering) tween.pause();
+    if (paused || hovering || offscreen) tween.pause();
     return () => {
       tween.kill();
     };
-  }, [index, autoplay, paused, hovering, go]);
+  }, [index, autoplay, paused, hovering, offscreen, go]);
 
   if (!shows.length) return null;
   const show = shows[index]!;
