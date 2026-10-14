@@ -2054,3 +2054,12 @@
   min-width: 108px;
   font-weight: 700;
 }
+@media (max-width: 520px) {
+  .notice-creds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .notice-creds dd {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+}
