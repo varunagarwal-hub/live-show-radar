@@ -1,45 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, prefersReducedMotion, whileVisible } from "./motion";
+import { whileVisible } from "./motion";
 
 /**
- * A venue marquee: bulb-lit border, text scrolling forever. Hovering or focusing pauses it, and
- * with reduced motion it sits still (the text is duplicated only for the loop).
+ * A venue marquee: bulb-lit border, text scrolling forever. The scroll is a CSS animation, so the
+ * browser runs it on the compositor without touching the main thread. Hovering or focusing pauses
+ * it, it stops while scrolled out of view, and with reduced motion it sits still (the text is
+ * duplicated only for the loop).
  */
 export function Marquee({ items }: { items: string[] }) {
-  const track = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = track.current;
-    if (!el || !items.length || prefersReducedMotion()) return;
-    const tween = gsap.to(el, { xPercent: -50, ease: "none", duration: Math.max(18, items.join(" ").length / 4), repeat: -1 });
-    const box = el.parentElement!;
-    let onScreen = true;
-    let hovered = false;
-    const sync = () => {
-      const run = onScreen && !hovered;
-      if (run) tween.play();
-      else tween.pause();
-      // The chasing bulbs are a CSS animation: pause them too while nobody can see them.
-      box.classList.toggle("is-idle", !onScreen);
-    };
-    const pause = () => ((hovered = true), sync());
-    const play = () => ((hovered = false), sync());
-    const stopWatching = whileVisible(box, (v) => ((onScreen = v), sync()));
-    box.addEventListener("mouseenter", pause);
-    box.addEventListener("mouseleave", play);
-    box.addEventListener("focusin", pause);
-    box.addEventListener("focusout", play);
-    return () => {
-      stopWatching();
-      tween.kill();
-      box.removeEventListener("mouseenter", pause);
-      box.removeEventListener("mouseleave", play);
-      box.removeEventListener("focusin", pause);
-      box.removeEventListener("focusout", play);
-    };
-  }, [items]);
+    const el = box.current;
+    if (!el) return;
+    return whileVisible(el, (v) => el.classList.toggle("is-idle", !v));
+  }, []);
 
   if (!items.length) return null;
   const run = items.map((t, i) => (
@@ -50,9 +27,11 @@ export function Marquee({ items }: { items: string[] }) {
       </span>
     </span>
   ));
+  // About as fast as the old version: longer text scrolls for longer.
+  const seconds = Math.max(18, Math.round(items.join(" ").length / 4));
   return (
-    <div className="marquee" role="marquee" aria-label={items.join(". ")}>
-      <div className="mq-track" ref={track} aria-hidden="true">
+    <div ref={box} className="marquee" role="marquee" aria-label={items.join(". ")} style={{ "--mq-seconds": `${seconds}s` } as React.CSSProperties}>
+      <div className="mq-track" aria-hidden="true">
         <div className="mq-run">{run}</div>
         <div className="mq-run">{run}</div>
       </div>

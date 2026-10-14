@@ -2332,3 +2332,22 @@
 .marquee.is-idle {
   animation-play-state: paused;
 }
+/* The marquee text scrolls with a compositor-only CSS animation (no per-frame JavaScript). */
+.mq-track {
+  animation: mq-scroll var(--mq-seconds, 30s) linear infinite;
+}
+@keyframes mq-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee:hover .mq-track,
+.marquee:focus-within .mq-track,
+.marquee.is-idle .mq-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mq-track {
+    animation: none;
+  }
+}
