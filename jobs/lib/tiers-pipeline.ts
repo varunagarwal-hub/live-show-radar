@@ -231,8 +231,13 @@ export async function runTiers(d: TiersDeps) {
           }
         }
       } catch (err) {
-        if (err instanceof BlockedError) stats.blocked = (stats.blocked ?? 0) + 1;
-        else d.log(`tier page for event ${e.id}: ${(err as Error).message}`);
+        // A page that refuses automated reading is the site's choice, not a fault: count it, but
+        // don't let it mark the run partial.
+        if (err instanceof BlockedError) {
+          stats.blocked = (stats.blocked ?? 0) + 1;
+          continue;
+        }
+        d.log(`tier page for event ${e.id}: ${(err as Error).message}`);
         stats.pageErrors = (stats.pageErrors ?? 0) + 1;
       }
     }

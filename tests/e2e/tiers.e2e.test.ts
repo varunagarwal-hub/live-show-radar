@@ -8,6 +8,7 @@ import { connectPglite } from "@radar/core/db/pglite";
 import type { DbHandle } from "@radar/core/db";
 import { artists, decisions, events, tierSnapshots } from "@radar/core/db/schema";
 import { loadSnapshot } from "@radar/core/db/queries";
+import { BlockedError } from "@radar/sources";
 import { runTiers } from "../../jobs/lib/tiers-pipeline";
 import { fixtureLlm, recordingSink } from "./fixtures";
 
@@ -137,5 +138,21 @@ describe("booking lookup with a stale snapshot", () => {
     });
     const [row] = await h.db.select({ url: events.bookingUrl }).from(events).where(eq(events.id, 22));
     expect(row!.url).toBe("https://in.bookmyshow.com/events/anuv-jain-kochi/ET00500002");
+  });
+});
+
+describe("ticket page that refuses automated reading", () => {
+  it("counts it as blocked without marking the run partial", async () => {
+    const now = new Date("2026-10-31T01:00:00Z");
+    const r = await runTiers({
+      getDb: async () => h, llm: () => fixtureLlm(), tg, chatId: "TEST_CHAT", dryRun: true, state, snapshot: await loadSnapshot(h, now), now, log: () => {},
+      fetchPage: async (url: string) => {
+        throw new BlockedError(url);
+      },
+      linkPage: async () => [],
+      searchBooking: async () => null,
+    });
+    expect(r.stats.blocked).toBeGreaterThan(0);
+    expect(r.stats.pageErrors ?? 0).toBe(0);
   });
 });
