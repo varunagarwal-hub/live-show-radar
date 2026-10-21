@@ -69,8 +69,11 @@ const VERCEL_VARS = [
   "LOGIN_PASSWORD_HASH",
   // Shown publicly in the demo notice on the sign-in page (owner's choice).
   "LOGIN_PASSWORD",
+  // /api/tick: an outside pinger starts the GitHub jobs when GitHub's timer runs late.
+  "TICK_SECRET",
+  "GITHUB_DISPATCH_TOKEN",
 ];
-const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32, TOKEN_ENC_KEY: 32 } as const;
+const RANDOM = { TELEGRAM_WEBHOOK_SECRET: 32, CALENDAR_FEED_TOKEN: 32, INGEST_EMAIL_SECRET: 32, NEXTAUTH_SECRET: 32, TOKEN_ENC_KEY: 32, TICK_SECRET: 32 } as const;
 
 function readEnv(): Map<string, string> {
   const m = new Map<string, string>();

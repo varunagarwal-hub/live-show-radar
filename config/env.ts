@@ -41,6 +41,11 @@ export const EnvSchema = z.object({
   LOGIN_PASSWORD_HASH: z.string().startsWith("scrypt$").optional(),
   /** The same password in plain text, shown in the public demo notice when set. */
   LOGIN_PASSWORD: z.string().min(8).optional(),
+  /** Lets an outside pinger start the GitHub jobs through /api/tick when GitHub's own timer runs late. */
+  TICK_SECRET: z.string().min(32).optional(),
+  /** Fine-grained GitHub token (this repo only, Actions: read and write) used by /api/tick. */
+  GITHUB_DISPATCH_TOKEN: z.string().min(20).optional(),
+  GITHUB_REPO: z.string().regex(/^[\w.-]+\/[\w.-]+$/).default("varunagarwal-hub/live-show-radar"),
   RADAR_DRY_RUN: z.string().optional(),
   RADAR_STATE_DIR: z.string().default(".radar-state"),
 });
